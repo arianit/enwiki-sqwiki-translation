@@ -12,9 +12,17 @@ The deliverable is a `.wiki` file in the outputs directory, not chat prose. Wiki
 
 ## Get the source right first
 
-**Ask for the wikitext, not the rendered page.** Fetching a rendered enwiki article returns prose: citation templates collapse, ref names vanish, and reconstructing ~180 `{{cite}}` templates by hand is both enormous and error-prone. If the user gives a URL, ask them to paste the source from `?action=raw` before starting. If they already pasted wikitext, work from that.
+**Always fetch wikitext via `?action=raw`, never the rendered page.** A rendered enwiki article returns prose: citation templates collapse, ref names vanish, and reconstructing ~180 `{{cite}}` templates by hand is both enormous and error-prone.
 
-If you have to work from the rendered page anyway — a short article, or the user isn't around to paste — it is workable but degraded, and you must say so. Citation parameters that don't render (`|url-status=`, `|via=`, `|display-authors=`) are invisible to you, short-form `{{sfn}}` citations arrive as bare "Author Year, p. N" that you are reconstructing by inference, and the infobox arrives as a flattened list where you can't see which parameter held what. Flag reconstructed citations as needing a check against the source.
+If the user gives a URL or article title, fetch the raw wikitext directly:
+
+```
+https://en.wikipedia.org/wiki/ARTICLE_NAME?action=raw
+```
+
+For example, `https://en.wikipedia.org/wiki/Siege_of_Shkodra?action=raw`. If they already pasted wikitext, work from that instead.
+
+If the raw fetch fails and you have to fall back to the rendered page — fetch the normal article URL and parse what you get — it is workable but degraded, and you must say so. Citation parameters that don't render (`|url-status=`, `|via=`, `|display-authors=`) are invisible, short-form `{{sfn}}` citations arrive as bare "Author Year, p. N" that you are reconstructing by inference, and the infobox arrives as a flattened list where you can't see which parameter held what. Flag reconstructed citations as needing a check against the source.
 
 **Check whether the sq article already exists.** Fastest route is the Wikidata item: its sitelink list names the sqwiki article if there is one, and its absence is equally informative. This works for articles exactly as it does for templates, in one search. Fall back to a web search for the likely Albanian title. If the article exists, this is a rewrite, not a new page — say so, because it changes how the user approaches saving, and the existing article may have a usable infobox or categories worth keeping.
 
