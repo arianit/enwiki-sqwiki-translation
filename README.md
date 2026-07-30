@@ -2,6 +2,8 @@
 
 An AI assistant skill for translating English Wikipedia articles into Albanian as paste-ready wikitext for [sq.wikipedia](https://sq.wikipedia.org).
 
+https://github.com/arianit/enwiki-sqwiki-translation
+
 ## What it does
 
 Given the wikitext of an enwiki article, it produces a `.wiki` file an experienced sqwiki editor can paste with minimal cleanup, plus an explicit report of what could not be verified. It handles:
