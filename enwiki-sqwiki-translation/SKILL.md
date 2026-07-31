@@ -1,6 +1,6 @@
 ---
 name: enwiki-sqwiki-translation
-version: beta1
+version: beta2
 description: Translate English Wikipedia articles into Albanian as paste-ready wikitext for sq.wikipedia, with source languages marked in every citation, ISO dates, Albanian number formatting, and dual transliteration of Slavic and non-Latin names. Use this skill whenever the user asks to translate a Wikipedia article, mentions sqwiki / sq.wiki / Albanian Wikipedia, pastes wikitext or a Wikipedia URL and asks for it "in Albanian", or asks to check redlinks, template existence, or citation language parameters in an Albanian article — even if they only say "translate this" and the source is obviously a Wikipedia article.
 ---
 
@@ -12,21 +12,30 @@ The deliverable is a `.wiki` file in the outputs directory, not chat prose. Wiki
 
 ## Get the source right first
 
-**Always fetch wikitext via `?action=raw`, never the rendered page.** A rendered enwiki article returns prose: citation templates collapse, ref names vanish, and reconstructing ~180 `{{cite}}` templates by hand is both enormous and error-prone.
+**Never fetch the rendered page.** A rendered enwiki article returns prose: citation templates collapse, ref names vanish, and reconstructing ~180 `{{cite}}` templates by hand is both enormous and error-prone.
 
-If the user gives a URL or article title, fetch the raw wikitext directly:
+**First option: the Action API**, `action=query` with `prop=revisions`. It returns the raw wikitext *and* the current `revid` in a single call — and the `revid` is exactly what's needed later for the attribution note, so this saves a second fetch:
 
 ```
-https://en.wikipedia.org/wiki/ARTICLE_NAME?action=raw
+curl -s -A "your-tool-name/1.0 (contact-info)" "https://en.wikipedia.org/w/api.php?action=query&prop=revisions&titles=ARTICLE_NAME&rvprop=content%7Cids&rvslots=main&formatversion=2&format=json" \
+  | jq -r '.query.pages[0].revisions[0].slots.main.content' > ARTICLE_enwiki_raw.wiki
 ```
 
-For example, `https://en.wikipedia.org/wiki/Siege_of_Shkodra?action=raw`. If they already pasted wikitext, work from that instead.
+Pull `.query.pages[0].revisions[0].revid` out of the same response and hold onto it for the attribution reminder at the end. `titles=` must be URL-encoded (spaces as `%20` or `_`).
 
-If the raw fetch fails and you have to fall back to the rendered page — fetch the normal article URL and parse what you get — it is workable but degraded, and you must say so. Citation parameters that don't render (`|url-status=`, `|via=`, `|display-authors=`) are invisible, short-form `{{sfn}}` citations arrive as bare "Author Year, p. N" that you are reconstructing by inference, and the infobox arrives as a flattened list where you can't see which parameter held what. Flag reconstructed citations as needing a check against the source.
+**Fallback: `?action=raw`**, if the API call fails or `jq` isn't available. It returns the wikitext directly as plain text — no JSON to unwrap — but does not give you the revid, so you'd need a separate call (`action=query&prop=revisions&rvprop=ids`) to get one for attribution:
+
+```
+curl -s "https://en.wikipedia.org/wiki/ARTICLE_NAME?action=raw"
+```
+
+Either way, save the result to a local file (`ARTICLE_enwiki_raw.wiki`) before translating. This avoids re-fetching and gives you a reference to diff against.
+
+If both raw-wikitext routes fail and you have to fall back to the rendered page — fetch the normal article URL and parse what you get — it is workable but degraded, and you must say so. Citation parameters that don't render (`|url-status=`, `|via=`, `|display-authors=`) are invisible, short-form `{{sfn}}` citations arrive as bare "Author Year, p. N" that you are reconstructing by inference, and the infobox arrives as a flattened list where you can't see which parameter held what. Flag reconstructed citations as needing a check against the source.
 
 **Check whether the sq article already exists.** Fastest route is the Wikidata item: its sitelink list names the sqwiki article if there is one, and its absence is equally informative. This works for articles exactly as it does for templates, in one search. Fall back to a web search for the likely Albanian title. If the article exists, this is a rewrite, not a new page — say so, because it changes how the user approaches saving, and the existing article may have a usable infobox or categories worth keeping.
 
-**Attribution is required.** sqwiki content is CC BY-SA; a translation is a derivative work. Tell the user to credit `en:Article name` and the oldid in the edit summary (or use sqwiki's translation template). Mention this once, at the end.
+**Attribution is required.** sqwiki content is CC BY-SA; a translation is a derivative work. Tell the user to credit `en:Article name` and the oldid — the `revid` captured during the fetch above — in the edit summary (or use sqwiki's translation template). Mention this once, at the end.
 
 ## Title
 
@@ -40,6 +49,66 @@ Example of the failure mode: for "Scutari invasion of Montenegro", `Pushtimi i S
 
 The enwiki gloss is sometimes right; the point is not to assume either way. When it's right, say so, so the user isn't left wondering whether you checked.
 
+This same check — searching existing sqwiki prose before inventing a rendering — applies well beyond the title. See below.
+
+## Check nearby sqwiki articles before inventing a phrase
+
+The technique above for the title generalizes to any recurring term, concept, or proper name in the body: a related sqwiki article has often already solved the same translation problem, and its answer is better evidence than a fresh guess, because it's what readers and other articles already expect.
+
+Before settling on a rendering for a specialized term, an institution, a recurring concept, or a named work, check whether sqwiki already has an article that uses it. Example: an article that references "the Socratic dialogues" should first be checked against sqwiki's own article on the topic (search `wikidata "Socratic dialogues" sqwiki` or a plain web search scoped to `site:sq.wikipedia.org`) — if sqwiki already renders it as, say, `Dialogjet sokratike`, use that wording everywhere the phrase recurs in your translation rather than retranslating it from scratch each time.
+
+This matters most for:
+- **Recurring named concepts** that appear more than once in the article (a named battle, a school of thought, a recurring institution) — inconsistent renderings across occurrences look worse than a single wrong one.
+- **Terms shared with other articles on the same topic cluster** — if you're translating one Socratic-dialogue-adjacent article, sqwiki likely already has others, and they should agree with each other.
+- **Names and terms you're least confident about** — when in doubt, this check is faster than reasoning about grammar from first principles, and it's exactly what the loanword-plural and vocabulary tables above are precedent for.
+
+Confirm the context matches before borrowing a term — the same English word can map to different Albanian words depending on sense (see "Vocabulary choices" below), so check that the existing article uses it the same way you need it, not just that the word appears somewhere on sqwiki.
+
+## Albanian grammar
+
+These are recurring errors in machine-assisted translation that must be checked in every article.
+
+### Wikilinks must carry inflected display text
+
+Albanian is a heavily inflected language. When a linked phrase appears inside a sentence, the **display text must match the grammatical case required by the sentence**, even when the wikilink target is in nominative form.
+
+Wrong: `Në [[Franca e Re]] të hershme` — "në" requires accusative, but display text is nominative.
+Right: `Në [[Franca e Re|Francën e Re]] të hershme`
+
+Common preposition → case mappings:
+- `në` + definite noun → accusative: `Athinë` → `Athinën`, `Franca e Re` → `Francën e Re`
+- `nga` + definite noun → ablative: `Athina` → `nga Athina` (often unchanged for cities)
+- genitives/datives require agreement with the modified noun
+
+Scan the whole article for wikilinks that appear after prepositions or as objects and verify the display text is inflected correctly. This is especially likely to be wrong in infobox values and image captions.
+
+### Vocabulary choices for "accounts / sources"
+
+The English word **"accounts"** (as in historical sources) must not be translated as `llogaritë` — that word means financial accounts or user login accounts. Choose contextually:
+
+| English | Albanian | Use when |
+|---|---|---|
+| testimonies, evidence from sources | `dëshmi` | primary or documentary evidence ("accounts by ancient writers") |
+| narratives, written accounts | `rrëfime` | narrative works (dialogues, memoirs, histories) |
+| sources | `burime` | sources in general ("these ancient sources") |
+| explanation, account of | `shpjegim` | an account/explanation of an inconsistency or event |
+| version, account as portrayal | `portretizim` | how a source portrays someone |
+
+### Abbreviations for era markers
+
+Use `p.e.s.` and `e.s.` in prose and infoboxes — do **not** hyperlink and spell out `[[para erës sonë]]`. The article already uses the abbreviations in prose, so a linked full form in the infobox is inconsistent. In categories and category-like contexts, the full form `para erës sonë` is standard and should stay.
+
+### Albanian plurals of loanwords
+
+Loanwords ending in `-g` often palatalize in the plural. Verify before assuming the English plural suffix pattern applies:
+
+| singular | indefinite pl. | definite pl. nom. | definite pl. gen. | confirmed |
+|---|---|---|---|---|
+| dialog | dialogje | dialogjet | dialogjeve | yes — sqwiki article `Dialogjet e Platonit` |
+| blog | blogje | blogjet | blogjeve | by analogy |
+
+Common error pattern: writing `dialogët` / `dialogëve` (treating it like a native Albanian noun) instead of `dialogjet` / `dialogjeve`.
+
 ## Verify link targets and templates
 
 Assume nothing about what exists on sqwiki. Guessed titles produce redlinks that look authoritative and get copied around.
@@ -50,7 +119,18 @@ Assume nothing about what exists on sqwiki. Guessed titles produce redlinks that
 
 **sqwiki sometimes translates the template name, sometimes not.** `Stampa:Infobox military conflict` and `Stampa:Infobox medical condition` keep the English name, but the philosopher infobox is `Stampa:Infobox filozof`. There is no rule — check each one. Never assume the enwiki name carries over just because a sibling template did.
 
-**Verifying the template name is not the same as verifying its parameters.** A localized template may also localize its parameter names, in which case English parameters render blank and the infobox silently loses half its content. When the name is translated, treat the parameters as unverified too and say so.
+**Verifying the template name is not the same as verifying its parameters.** A localized template may also localize its parameter names, in which case English parameters render blank and the infobox silently loses half its content. When the name is translated, treat the parameters as unverified too.
+
+**How to verify parameters for a translated infobox.** Fetch the template talk page or template page directly via curl:
+
+```
+curl -s "https://sq.wikipedia.org/wiki/Stampa:TEMPLATE_NAME?action=raw"
+curl -s "https://sq.wikipedia.org/wiki/Stampa_diskutim:TEMPLATE_NAME?action=raw"
+```
+
+The talk page often has a documented parameter table. `references/sqwiki-verified.md` records confirmed parameter sets so you don't re-fetch on every job.
+
+**Known case: `Stampa:Infobox filozof`** has a mix of Albanian and English parameters. English passthrough: `region`, `era`, `image`, `image_caption`, `signature`, `color`. Albanian: `emri`, `lindja`, `vendlindja`, `vdekja`, `vendvdekja`, `shkolla_tradita`, `interesimet`, `ndikimet`, `ndikoi_te`, `idetë`. Using the wrong names silently loses content.
 
 **Substitutions that always work.** When a template can't be confirmed, prefer plain MediaWiki over a guess — it cannot break:
 
@@ -71,9 +151,21 @@ The harvnb→Sfn swap has a visible cost: one footnote holding six sources becom
 
 Also drop enwiki project furniture that has no sqwiki counterpart: `{{Short description}}`, `{{Use dmy dates}}`, `{{cs1 config}}`, `{{TOC limit}}`, `{{About}}`, `{{Distinguish}}`, maintenance tags, navboxes, `{{Authority control}}`, `{{Portal bar}}`. Expand any template that only wraps a citation (e.g. `{{NINDS}}`) into a plain `cite web`.
 
+## Images
+
+**Include all inline images from the source.** A first-pass translation that omits `[[File:…]]` tags is incomplete and requires a second pass. Process images alongside the prose, not as an afterthought. Commons file names are cross-wiki and work on sqwiki without modification.
+
+Translate the caption fully, including any embedded links (verify sqwiki link targets apply). Preserve `|thumb|`, `|left|`, `|right|`, `|upright=`, size hints as-is — they are layout instructions, not prose.
+
 ## Citations
 
 **Mark the language of every source** with `|language=` and an ISO code — `en`, `de`, `sr`, `sq`, `pl`, `pt`, `vi`. On sqwiki even English sources are foreign-language, so `en` is not optional. CS1 renders the localized name if the module is localized and the English name otherwise; either way the information is there. Check the actual language of each source rather than copying enwiki's parameter — a blog post with an Albanian title is `sq` even if enwiki tagged it `en`. Add `trans-title` for non-English titles, translated into Albanian.
+
+**Known CS1 Lua bug on sqwiki: `|language=grc` crashes.** sqwiki's Module:Citation/CS1 has `grc` (Ancient Greek) in `lang_tag_remap` but the corresponding `lang_name_remap` entry is broken or missing. Every cite template with `|language=grc` throws:
+
+> Lua error te Moduli:Citation/CS1 te rreshti 1763: attempt to index field '?' (a nil value)
+
+Fix: remove `|language=grc` from all cite templates. For Perseus or TLG links the Greek-language context is obvious. If you need to signal the language, add a parenthetical in the `|title=` or surrounding prose instead. Do not substitute `|language=el` (Modern Greek) — that is factually wrong.
 
 **Dates: ISO.** `YYYY-MM-DD` for full dates, `YYYY-MM` for month-only. Albanian month names inside `|date=` may trip sqwiki's date validation, and ISO is unambiguous. Scope any bulk conversion to `|date=`, `|archive-date=` and `|access-date=` so prose dates stay in Albanian — a regex loose enough to hit running text will quietly corrupt the article.
 
@@ -84,6 +176,16 @@ Also drop enwiki project furniture that has no sqwiki counterpart: `{{Short desc
 **Unlink institution names inside refs** (`[[Centers for Disease Control and Prevention]]` → plain text) — those are enwiki titles and will redlink.
 
 **Short-form citation articles.** Many history articles cite with `{{sfn}}` pointing at a `{{citation}}` bibliography rather than full inline refs. There `|language=` belongs on the bibliography entries, not at the `{{sfn}}` call sites — a per-ref sweep will find nothing to tag and miss the whole apparatus. `{{Sfn}}`, `{{SfnRef}}` and `{{citation}}` are all present on sqwiki, and sfn anchors resolve against `{{citation}}` automatically, so the pairing carries over unchanged.
+
+**`{{Sfnmp}}` with two-author secondary citations.** When the second (or later) citation in an `{{Sfnmp}}` call has two authors, use `2last2=` for the second author's surname — do not duplicate the `2y=` parameter:
+
+```
+Wrong: {{Sfnmp|Foo|2020|p=1|2=Smith|2y=Jones|2y=2019|2p=5}}
+                                          ^^^^^^^^^^^^^^ duplicate param; Jones is silently dropped
+Right: {{Sfnmp|Foo|2020|p=1|2=Smith|2last2=Jones|2y=2019|2p=5}}
+```
+
+The wrong form causes the Sfnmp to look for `CITEREFSmith2019` but the cite book with `last1=Smith|last2=Jones` generates `CITEREFSmithJones2019`, so the footnote link breaks silently.
 
 Don't assume the source language distribution. A medical article may be almost entirely English; a Balkan history article may be almost entirely Serbian with one Albanian source and no English at all. Tag what is actually there.
 
@@ -99,12 +201,23 @@ When an sqwiki article exists for the person, link to its actual title even when
 - Section headings translated, not transliterated: `== Referime ==`, `== Burimet ==`, `== Lidhje të jashtme ==`, `== Historia ==`, `== Shoqëria dhe kultura ==`.
 - Categories in Albanian with `[[Kategoria:…]]`. Flag any category name you invented.
 - Technical vocabulary: pick one rendering per concept and hold it across the article (e.g. *imuniteti kolektiv* for herd immunity, *amnezia imunitare* for immune amnesia).
+- Era abbreviations: `p.e.s.` (para erës sonë = BC) and `e.s.` (erës sonë = AD) in prose and infoboxes. Do not hyperlink these or spell them out once the abbreviation has been introduced.
 
 ## Editorial judgement
 
 Faithful translation is the default, but enwiki articles are often written for a US or UK reader. Where an article gives five paragraphs to American outbreaks and one sentence to an epidemic that killed thousands elsewhere, translate it faithfully and then flag the imbalance — trimming is the user's call, not yours. Point out where Albania- or Kosovo-relevant material exists in the source and deserves expansion from local sources.
 
 Don't silently "fix" the source. If enwiki has a vague antecedent ("Later that day…" with no established day), preserve the vagueness and note it rather than inventing a date.
+
+## Model efficiency
+
+Not every step in this workflow needs the same amount of reasoning. Match effort to the step:
+
+- **Mechanical steps — do directly, don't escalate.** Fetching wikitext, running a single Wikidata-sitelink search, a `grep` audit count, checking whether one template page exists: these are lookups, not judgment calls. Doing them as a heavier model or a spawned subagent is wasted cost for no better result.
+- **Judgment steps — this is where a heavier model earns its cost.** Title direction and case (agent vs. object in a genitive), inflecting wikilink display text to match sentence case, disambiguating vocabulary (`llogaritë` vs. `dëshmi` vs. `burime`), reconciling terminology against a nearby sqwiki article's existing wording, spotting an `{{Sfnmp}}` parameter collision — these require actually reasoning about Albanian grammar and about what the source means, and are where mistakes are both likely and costly to unwind later.
+- **If delegating a sub-task to a subagent** (e.g., a batch of link-existence checks across a long article), a lighter/faster model is normally sufficient — it's the same lookup work, just parallelized. Reserve a heavier model for a subagent only if you're asking it to make a translation or grammar judgment, not just verify a fact.
+
+When in doubt about which bucket a step falls in: if getting it wrong would only mean re-running a search, it's mechanical; if getting it wrong would ship a grammatically or factually incorrect sentence into the article, it deserves the heavier pass.
 
 ## Working method on long articles
 
@@ -119,10 +232,12 @@ Don't silently "fix" the source. If enwiki has a vague antecedent ("Later that d
 ```
 grep -o 'language=[a-z, ]*' FILE | sort | uniq -c        # language spread
 grep -o '{{Sfn' FILE | wc -l ; grep -c '^\* {{cite' FILE  # sfn calls vs bibliography entries
-grep -o '{{\(langx\|efn-ua\|harvnb\|cite SEP\|font color\)' FILE | sort -u   # leftover enwiki templates
+grep -c '\[\[File:' FILE                                   # inline images present
+grep -o '{{\(langx\|efn-ua\|harvnb\|cite SEP\|font color\)' FILE | sort -u  # leftover enwiki templates
+grep -c 'llogari' FILE                                     # "accounts" mistranslation check
 ```
 
-Report the counts. They are the evidence that the citation apparatus survived.
+Report the counts. They are the evidence that the citation apparatus survived. The image count should be non-zero for any article-length piece; zero means images were dropped.
 
 **High-traffic and quality-rated articles need a heads-up.** Replacing an existing sq article with a 100 KB translation is a big, visible edit. Suggest a talk-page note first.
 
