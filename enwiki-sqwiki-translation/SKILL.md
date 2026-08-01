@@ -227,7 +227,7 @@ Translate the caption fully, including any embedded links (verify sqwiki link ta
 
 Fix: remove `|language=grc` from all cite templates. For Perseus or TLG links the Greek-language context is obvious. If you need to signal the language, add a parenthetical in the `|title=` or surrounding prose instead. Do not substitute `|language=el` (Modern Greek) — that is factually wrong.
 
-**Dates: ISO.** `YYYY-MM-DD` for full dates, `YYYY-MM` for month-only. Albanian month names inside `|date=` may trip sqwiki's date validation, and ISO is unambiguous. Scope any bulk conversion to `|date=`, `|archive-date=` and `|access-date=` so prose dates stay in Albanian — a regex loose enough to hit running text will quietly corrupt the article.
+**Dates: ISO for full dates only — never `YYYY-MM` for month-only.** `YYYY-MM-DD` is safe and correct wherever the source gives day+month+year. But CS1's date parser does not accept a bare year-month value with no day: `|date=2016-03` throws `Shiko vlerat e datave në: |date= (Ndihmë!)` ("check date values") on the live page — confirmed in production (2026-08-01), 43 citations broken this way in a single article from a bulk conversion that ISO-ified every date indiscriminately. For a month-only source date, leave the original English `Month YYYY` form untouched (`date=March 2016`, not `date=2016-03` and not a translated `date=mars 2016`) — CS1 recognizes English month names regardless of the wiki's language, and this format was already valid in the source you're translating from. Scope any bulk ISO conversion strictly to values that already contain a day (`\d{1,2} Month \d{4}` or similar), and scope it to `|date=`, `|archive-date=`, `|access-date=` only — never let the regex touch running prose, where dates should stay in Albanian.
 
 **Archive links.** Keeping every `archive-url`/`archive-date` pair roughly doubles the file size of a heavily-cited article. InternetArchiveBot runs on sqwiki and re-adds them, so stripping them is defensible for long articles — but say you did it and offer to restore them.
 
@@ -307,6 +307,8 @@ grep -c '\[\[File:' FILE                                   # inline images prese
 grep -o '{{\(langx\|efn-ua\|harvnb\|cite SEP\|font color\)' FILE | sort -u  # leftover enwiki templates
 grep -c 'llogari' FILE                                     # "accounts" mistranslation check
 grep -c '^|-' FILE                                          # table row count, compare to source
+grep -coE '\bdate *= *[0-9]{4}-[0-9]{2}([^-]|$)' FILE       # bare month-only ISO dates — breaks CS1, must be 0
+grep -n '{{\(Main\|Further\|See also\)|[A-Z]' FILE          # hatnotes with un-transliterated (likely English) targets — check each by hand
 ```
 
 Report the counts. They are the evidence that the citation apparatus survived. The image count should be non-zero for any article-length piece; zero means images were dropped. For a table-heavy article, also diff the `^|-` count and the `^==` section-heading count against the same greps run on the source file — a mismatch means a row or a whole section got dropped during assembly, which a spot-check of the rendered tables alone can miss.
