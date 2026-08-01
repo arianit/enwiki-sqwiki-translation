@@ -17,6 +17,7 @@ Confirmed by Wikidata sitelinks (templates) or by a search result URL (articles)
 | `{{Lang}}` | `Stampa:Lang` |
 | `{{Lang-xx}}` variants | `Stampa:Lang-it`, `Stampa:Lang-sv`, `Stampa:Lang-jp` etc. — the family exists; check the specific code |
 | `{{Link language}}` (marks an external link's language) | `Stampa:Ikonë gjuha` |
+| Translation-attribution notice (talk page) | `Stampa:Përkthyer nga` — params: `1=`source lang code, `2=`exact enwiki title, `3=`date in Albanian prose (`28 korrik 2026`), `4=`revid. Place on `Diskutim:` page; it self-detects and warns if pasted into the article namespace instead. Full pattern and worked example in the "Attribution is required" section of SKILL.md. |
 
 CS1 citation templates (`cite web`, `cite book`, `cite journal`, `cite news`, `citation`) and `{{Reflist}}` are in active use on sqwiki — Module:Citation/CS1 is installed.
 
@@ -212,6 +213,48 @@ curl -s "https://sq.wikipedia.org/w/index.php?title=Moduli:Citation/CS1&action=r
 
 **Wikidata sitelink checks get silently rate-limited when done one-title-per-request.** Issuing one `wbgetentities?sites=enwiki&titles=X` call per title in a loop hits Wikidata/sqwiki rate limits after roughly 15–20 rapid requests; the response body then comes back empty or non-JSON, and a naive parser reports these as `MISSING` — a false negative that leaves real, existing sqwiki articles wrongly unlinked. Always batch multiple `enwiki` titles into one request with `|`-joined `titles=` (same mechanism as the Action API batching above), and add a short pause between batches for very long lists. Never trust a single "MISSING" result from an unbatched, rapid-fire loop — re-verify with a proper batched call before concluding a term has no sqwiki article.
 
+**At 400–500+ unique targets (equipment lists, order-of-battle, filmographies), script the batching instead of hand-writing each `curl` call.** `wbgetentities` caps at 50 titles per request, so a large list article needs 10+ batches; a short throwaway script removes the tedium and, more importantly, produces a durable TSV cache you can `grep` for the rest of the job instead of re-querying:
+
+```python
+import urllib.request, urllib.parse, json, time
+
+with open('all_link_targets.txt') as f:
+    titles = [l.strip() for l in f if l.strip()]
+
+def chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i+n]
+
+results = {}
+for batch in chunks(titles, 50):
+    enc = urllib.parse.quote('|'.join(batch))
+    url = f"https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles={enc}&props=sitelinks&format=json"
+    req = urllib.request.Request(url, headers={'User-Agent': 'your-tool/1.0 (contact-info)'})
+    with urllib.request.urlopen(req) as resp:
+        data = json.load(resp)
+    for ent in data.get('entities', {}).values():
+        sl = ent.get('sitelinks', {})
+        en = sl.get('enwiki', {}).get('title')
+        sq = sl.get('sqwiki', {}).get('title')
+        if en:
+            results[en] = sq
+    time.sleep(0.3)
+
+with open('link_verification.tsv', 'w') as f:
+    for t in titles:
+        f.write(f"{t}\t{results.get(t) or ''}\n")
+```
+
+Then draft against `grep -E '^(Target1|Target2|...)\t' link_verification.tsv` per section instead of re-hitting the API. Anything with a non-empty second column links directly; anything empty gets `[[:en:Exact Title|Display]]` (see the interwiki-fallback note in SKILL.md) rather than a guessed sqwiki title or bare plain text.
+
+## Military / equipment-list templates
+
+**Flag/origin templates need their own existence check — don't assume a whole IOC-code family carries over.** Equipment and order-of-battle articles use flag-icon templates (`{{SRB}}`, `{{USA}}`, `{{URS}}`, …) on nearly every table row. Batch-check them like any other template (`action=query&titles=Stampa:SRB|Stampa:YUG|...`). Confirmed present as of 2026-08-01: `SRB`, `YUG`, `CHN`, `USSR`, `GER`, `RUS`, `USA`, `ISR`, `FRA`, `UK`, `SWE`, `CZE`, `BEL`, `PRC`, `AUT`, `SUI`, `POL`, `FIN`, `ESP`. **Missing:** `URS` (enwiki's alternate code for the USSR — substitute `{{USSR}}`, which points at the same `Stampa:Country data Soviet Union`) and `CZS` (Czechoslovakia — substitute `{{Flag|Czechoslovakia}}` or `{{Flagicon|Czechoslovakia}}`).
+
+`Stampa:Flag` and `Stampa:Flagicon` both exist and work generically as `{{Flag|Country name}}` / `{{Flagicon|Country name}}`, resolving to `Stampa:Country data <Country name>` — useful as a fallback for any origin whose short-code template is missing or unconfirmed, since the underlying `Country data` page usually exists even when the shortcut doesn't. `Stampa:Harvid` and `Stampa:In lang` are also confirmed present (verified 2026-08-01).
+
+**A country's general military article is worth fetching whole before translating its dedicated equipment list.** `Ushtria Serbe` (the Serbian Army article) independently confirmed the title `Lista e pajisjeve të Forcave të Armatosura të Serbisë`, supplied vetted terminology (`Tank Kryesor Luftarak` → actually a redlink, corrected to the real article `Tanku kryesor i betejës`; `Automjet Luftarak i Këmbësorisë`, `Obus Vetëlëvizës`, `Transportues Personeli i Blinduar`, `Sistem raketor antitank`, `MANPADS`, `Pushkë Sulmi`, `Mitralozi`, `Pushkë Snajper`), and demonstrated the community's own convention for uncovered weapon models: direct interwiki links (`[[:en:Article|Display]]`), not plain text or invented sqwiki titles. Treat a partial-coverage sibling article as a bigger efficiency win than a single-term nearby-article check — it can hand over a whole methodology, not just one word.
+
 ## Albanian grammar quick-reference
 
 ### Loanword plurals — palatalization before `-je`/`-jet`
@@ -251,3 +294,52 @@ Check every wikilink that appears after a preposition or in object position.
 ### Era abbreviations
 
 In prose and infoboxes, use `p.e.s.` (para erës sonë) and `e.s.` (erës sonë). Do not hyperlink or spell out once the abbreviation is introduced. In category names, `para erës sonë` is spelled out and stays as-is.
+
+## Templates confirmed present on sqwiki (art/sculpture batch, verified 2026-08-01)
+
+`Stampa:Rreth` (this is the localized name Wikidata's sitelink returns for `Template:Circa` — a separate `Stampa:Circa` was independently confirmed present the same day by another job; treat both as valid, `Stampa:Rreth` is the one Wikidata actually links), `Stampa:Cite web/book/journal/news/press release`, `Stampa:Refbegin`/`Stampa:Refend`, `Stampa:Div col`/`Stampa:Div col end`, `Stampa:ISBN`, `Stampa:Lang`, `Stampa:Commons`, `Stampa:Convert`, `Stampa:Anchor`, `Stampa:Cite EB1911`, `Stampa:Webarchive`, `Stampa:Reflist`.
+
+**Family-name trap:** `Stampa:Wiktionary kuti` is the real sqwiki name for enwiki's `{{Wiktionary}}` sister-project box — not `Stampa:Wiktionary`. Don't assume a sister-project template family (Commons/Wiktionary/Wikiquote) carries over with matching names just because `{{Commons}}` does: `{{Wikiquote}}` itself has no sqwiki sitelink at all (drop it).
+
+**Missing (verified 2026-08-01):** `Stampa:Wikiquote`, `Stampa:Portal` (single-portal form, consistent with the med-batch finding above).
+
+## Article/person titles confirmed (art/sculpture batch, verified 2026-08-01)
+
+| enwiki | sqwiki |
+|---|---|
+| Sculpture | `Skulptura` (pre-existing 6.9 KB stub — rewrite target) |
+| Michelangelo | `Mikelanxhelo` — the old stub on this exact article had it wrong as `Mikelangjelo`; don't trust a live article's own internal links as pre-verified (see the rewrite-target note above) |
+| Pope Julius II | `Juli II` (no "Papa" prefix in the title itself) |
+| Phidias | `Fidia` |
+| Praxiteles | `Praksiteli` |
+| Filippo Brunelleschi | `Filippo Brunelleschi` (unchanged) |
+| Donatello | `Donatello` (unchanged) |
+| Andrea del Verrocchio | `Andrea del Verrokjo` — transliterated; display text can stay "Verrocchio" |
+| Leonardo da Vinci | `Leonardo da Vinçi` (matches the earlier Archimedes-batch finding above — consistent across jobs) |
+| Francesco Laurana | `Françesko Laurana` — transliterated |
+| Benvenuto Cellini | `Benvenuto Cellini` (unchanged) |
+| Gian Lorenzo Bernini | `Gian Lorenzo Bernini` (unchanged) |
+| Auguste Rodin | `Auguste Rodin` (unchanged) |
+| Pablo Picasso | `Pablo Picasso` (unchanged) |
+| Marcel Duchamp | `Marcel Duchamp` (unchanged) |
+| Constantin Brâncuși | *no sq article* — easy to assume otherwise since he's canonical enough to feel linkable; verify anyway |
+| Renaissance | `Rilindja` |
+| Baroque | `Baroku` |
+| Gothic art | `Arti gotik` |
+| Modernism | `Modernizmi` |
+| Minimalism | `Minimalizmi` |
+| Roman art | `Arti romak` |
+| Islamic art | `Arti islam` |
+| Iconoclasm | `Ikonoklastia` |
+| Cubism | `Kubizmi` |
+| Surrealism | `Surrealizmi` |
+| Expressionism / Abstract expressionism | `Ekspresionizmi` / `Ekspresionizmi abstrakt` |
+| Ancient Egypt | `Egjipti i Lashtë` |
+| Ancient Greece | `Greqia e Lashtë` |
+| Ancient Rome | `Roma e Lashtë` |
+| Middle Ages | `Mesjeta` |
+| Bronze Age | `Koha e Bronzit` |
+| Mesopotamia | `Mesopotamia` (unchanged) |
+| Mannerism, Neoclassicism, Ancient Greek art, Art of ancient Egypt, Buddhist art, African art, Byzantine art, Pre-Columbian art, Romanesque art, Upper Paleolithic, Aniconism, Land art, Installation art, Conceptual art, and ~40 individual 19th–21st-century sculptors (Henry Moore, Alberto Giacometti, Alexander Calder, Louise Bourgeois, Richard Serra, Andy Goldsworthy, Robert Smithson, Camille Claudel, Aristide Maillol, Antoine Bourdelle, François Rude, Jean-Baptiste Carpeaux, Jean-Antoine Houdon, Antonio Canova, John Flaxman, Bertel Thorvaldsen, Hiram Powers, Gislebertus, Nicola/Giovanni Pisano, Claus Sluter, Tilman Riemenschneider, Veit Stoss, Arnolfo di Cambio, Pisanello, Baccio Bandinelli, Giambologna, Adriaen de Vries, and more) | all *no sq article* — for a survey article this broad, the miss rate on individual modern/Western-European sculptors is high even for household names; don't assume canonical status implies coverage |
+
+Illustrates the general pattern for this wiki: ancient/classical figures and period-level concepts have much better coverage than post-1800 Western sculptors specifically, even famous ones. Budget verification accordingly — check the movement/period nouns first, they're more likely to pay off than an individual modern artist's name.

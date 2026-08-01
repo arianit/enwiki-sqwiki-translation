@@ -1,6 +1,6 @@
 ---
 name: enwiki-sqwiki-translation
-version: beta3
+version: beta6
 description: Translate English Wikipedia articles into Albanian as paste-ready wikitext for sq.wikipedia, with source languages marked in every citation, ISO dates, Albanian number formatting, and dual transliteration of Slavic and non-Latin names. Use this skill whenever the user asks to translate a Wikipedia article, mentions sqwiki / sq.wiki / Albanian Wikipedia, pastes wikitext or a Wikipedia URL and asks for it "in Albanian", or asks to check redlinks, template existence, or citation language parameters in an Albanian article — even if they only say "translate this" and the source is obviously a Wikipedia article.
 ---
 
@@ -39,7 +39,46 @@ If checking several titles against Wikidata, batch them into one `wbgetentities?
 
 **A rewrite target's existing content is not pre-verified.** An infobox template and its parameter names can be trusted if they are visibly rendering correctly on the live page — that's proof the template and params work. But individual wikilinks *inside* that existing article are not proof of anything; treat them exactly like your own draft's links and verify them. A live article can render fine while linking to several redlinks.
 
-**Attribution is required.** sqwiki content is CC BY-SA; a translation is a derivative work. Tell the user to credit `en:Article name` and the oldid — the `revid` captured during the fetch above — in the edit summary (or use sqwiki's translation template). Mention this once, at the end.
+**Attribution is required.** sqwiki content is CC BY-SA; a translation is a derivative work. Give the user both a ready-to-paste talk-page template and an edit-summary sentence — don't just describe the requirement and leave them to build it. Mention this once, at the end.
+
+**`{{Përkthyer nga|LANG|ARTICLE|DATE|REVID}}` goes on the Talk page, never in the article.** Its `{{#if:{{NAMESPACE}}|…}}` check means it renders a self-correcting error ("gabimisht është përfshirë në artikull — vendose në faqen e diskutimit") when placed in article space, because `{{NAMESPACE}}` is the empty string there; it only displays correctly on Talk or any other non-main namespace. Confirmed 2026-08-02 by fetching the template source — don't place it at the top of the article body.
+
+**End every output file with a trailing, HTML-comment-wrapped block**, so it stays inert if the whole file is pasted straight into the article, holding both ready-to-copy pieces:
+
+```
+<!--
+NUK ËSHTË PJESË E ARTIKULLIT — mos e kopjo këtë bllok në faqen kryesore.
+
+== Për faqen e diskutimit (Talk) ==
+{{Përkthyer nga|en|ARTICLE_NAME|DD MUAJ YYYY|REVID}}
+
+== Përmbledhja e redaktimit ==
+Përkthyer nga anglishtja, sipas artikullit en:ARTICLE_NAME, versioni i datës DD MUAJ YYYY (revizioni REVID).
+-->
+```
+
+The edit-summary line is the same facts as one prose sentence, for the "Edit summary" field when saving (which doesn't render templates) rather than the talk-page notice. Get the revision's timestamp via `action=query&prop=revisions&revids=REVID&rvprop=timestamp` if it wasn't already captured during the fetch — don't guess the date. Paste both pieces into the chat response too, not only the file, since the user may act on them before opening it.
+
+**Talk-page template**, confirmed present as `Stampa:Përkthyer nga` (verified 2026-08-01) — paste it on the article's *talk* page (`Diskutim:Titulli i artikullit`), not the article itself; the template detects the wrong namespace and prints a warning if misplaced:
+
+```
+{{Përkthyer nga|en|EXACT_ENWIKI_TITLE|DATË_SHQIP|REVID}}
+```
+
+- `1=` the source-wiki language code (`en`)
+- `2=` the exact enwiki title, spaces as spaces not underscores (e.g. `Archimedes`, not `List_of_equipment...`)
+- `3=` the date of the source revision, in Albanian prose form (`28 korrik 2026`, not `2026-07-28` — this is a rendered sentence, not a citation date field, so it does not follow the ISO rule used elsewhere in this skill). Albanian month names: `janar, shkurt, mars, prill, maj, qershor, korrik, gusht, shtator, tetor, nëntor, dhjetor`.
+- `4=` the `revid` captured during the initial fetch (see "Get the source right first")
+
+Worked example from an actual job: `{{Përkthyer nga|en|Archimedes|28 korrik 2026|1366588187}}`.
+
+**Edit-summary sentence** — same three facts (source language, source title, revision), just as prose instead of a template call, since edit summaries don't render wikitext:
+
+```
+Përkthyer nga anglishtja, artikulli «EXACT_ENWIKI_TITLE», versioni i datës DATË_SHQIP (rev. REVID).
+```
+
+Fill in both from the same `revid` and title you already have — there's no separate lookup.
 
 ## Title
 
@@ -123,6 +162,12 @@ Assume nothing about what exists on sqwiki. Guessed titles produce redlinks that
 2. Triage the list: skip one-off name-drops (a historian cited once, a publisher, an obscure crater) — these are never worth verifying, go straight to plain text for them. Keep recurring concepts, central proper nouns, and anything you're translating a guessed Albanian rendering for.
 3. Batch-check the survivors against sqwiki's `action=query&titles=A|B|C` (up to 50 titles per call, `redirects=1`) — 2–3 calls covers most articles. For Wikidata sitelink checks specifically, batch the same way (`wbgetentities?sites=enwiki&titles=A|B|C`); looping one title per request hits rate limits after ~15–20 calls and a naive parser reads the resulting empty response as "no article," a false negative that silently unlinks real topics.
 4. Only then draft, using the verified list to decide link vs. plain text per term.
+
+**Past ~150 unique targets, do the batching in a throwaway script, not by hand.** A single history article rarely exceeds this, but an equipment list, order-of-battle, or filmography can easily surface 400–500+ unique link targets. Hand-crafting each `curl` call for a 10-batch job wastes turns and invites the exact one-at-a-time mistake this section already warns against, just at larger scale. Instead: extract all unique targets once (`grep -oE '\[\[[^]|#]+' SOURCE.wiki | sed -E 's/^\[\[//' | sort -u > targets.txt`), then run one small Python (or shell) loop that chunks the list into 50-title `wbgetentities` requests, pauses briefly between batches, and writes every result — found or not — to a `target<TAB>sqwiki_title_or_empty` TSV file. That file becomes a durable lookup table: the rest of the job is `grep` against it instead of re-hitting the API, and it survives if you need to revisit a section later in the same job.
+
+**For anything the batch check doesn't confirm, default to an interwiki link, not plain text.** You already have the exact enwiki title — you extracted it from the source, so there is no guessing involved — so `[[:en:Exact Title|Display text]]` costs nothing to verify and can never produce a redlink. It also gives the reader a real path to information sqwiki doesn't cover yet, which plain unlinked text doesn't. This is a stronger default than "leave as plain text" specifically for articles dense with proper nouns unlikely to have individual sqwiki coverage — equipment models, unit designations, named systems, minor filmography entries — where sqwiki coverage will be sparse but the enwiki target is never in doubt. Reserve genuine plain text for terms that add nothing when linked (a generic adjective, a one-off descriptor with no article-worthy topic behind it).
+
+**A "MISSING" Wikidata sitelink is not proof a small utility template doesn't exist.** Wikidata sitelinks only tell you two pages are *linked as the same item* — plenty of narrow-purpose formatting templates (`{{Nbsp}}`, `{{Anchor}}`-style one-liners) never get a Wikidata item connecting them across wikis at all, so a batched `wbgetentities` check reports them `MISSING` even when the sqwiki page exists and works fine. Before treating that as a real gap: check whether the template has a zero-cost native substitute (`&nbsp;` needs no template regardless of what `{{Nbsp}}` resolves to), and only spend a direct `?action=raw` fetch confirming/denying existence if there is no substitute and the template is actually going to be used repeatedly.
 
 **Watch for false confidence from MediaWiki's case-folding.** MediaWiki only auto-capitalizes the *first character* of a title. `[[proteina]]` correctly resolves to `Proteina` — but an inflected or genitive Albanian form does not get the same courtesy: `[[kolerës]]` will NOT resolve just because `Kolera` exists, `[[tifos]]` will NOT resolve just because `Tifoja` exists. Check the literal bracketed string you're about to ship, not the lemma you have in your head. This is also why a redirect can trap you the other way: `[[virus]]` on sqwiki silently redirects to *Virusi kompjuterik* (computer virus), not the biological concept — a plausible-looking title resolving to the wrong topic is exactly the class of error batch verification exists to catch, and it will not show up as a redlink, so a "just check for red" review pass misses it entirely.
 
@@ -242,7 +287,18 @@ When in doubt about which bucket a step falls in: if getting it wrong would only
 
 **Build very long articles in two files and concatenate.** Body through `== Referime ==` in one, bibliography and external links in the other, then `cat` them together. A single enormous write risks truncation, and splitting at the bibliography boundary makes the citation apparatus reviewable on its own.
 
-**Audit the assembled file before presenting it.** Cheap checks that catch real errors:
+**The two-file split is a floor, not a ceiling — a long prose survey article needs more, even with no tables.** An article like "Sculpture" (168 KB, ~50 sub-sections spanning every world region and era, 28 galleries, no infoboxes or tables) doesn't fit the body/bibliography split cleanly: there is no single bibliography boundary and any one `Write` covering multiple major regions risks the same truncation the two-file rule exists to avoid. Split at natural content boundaries instead — by major topic block (e.g. one file for the lead through Materials, one per broad History era/region cluster, one for Modernism through the end) — and `cat` them in order at the end. Six part files of 100–150 lines each is a normal shape for an article this size; there's nothing wrong with more than two when the source has this much breadth. The test isn't "is it table-heavy," it's "does any single planned `Write` risk exceeding a safe size."
+
+**Optional, exhaustive verification work is a follow-up, not part of the first pass.** A gallery-and-caption-dense survey article can name several hundred individual artists/artworks — batch-verifying all of them upfront is not a good use of the first pass; most readers won't need it, and guessing which subset is "key" wastes calls on names the user doesn't care about. Do the first draft with only the terms and recurring concepts already required by "Verify link targets and templates," report clearly that individual proper nouns were left unlinked and why, and offer to link key ones "once verified." If the user takes you up on it, that follow-up request itself is the filter: verify only the names that recur in continuous prose (not one-off gallery captions), batch them in one or two `wbgetentities` calls, and apply the confirmed subset. This produced a clean, small, high-value pass (13 artists, ~34 link instances) instead of a speculative several-hundred-title verification that would have mostly gone unused.
+
+**Table-heavy "list of equipment" / order-of-battle articles are a distinct shape — plan for it before drafting a single row.** These run 300+ table rows across a dozen-plus sections with very little continuous prose: most of the work is short Type-column phrases and one-to-two-sentence Notes that repeat, near-verbatim, across dozens of rows, plus a flag/origin template on every row. Treat this differently from a prose article:
+
+- Do the full link-extraction-and-batch-verify pass (see "Verify link targets and templates") *before* touching any table, not section by section. A Type phrase like "off-road vehicle" or "self-propelled howitzer" can recur 15–20+ times across the article; deciding its Albanian rendering once and reusing it from a lookup table is both faster and more consistent than re-deciding it fresh in each section, where it risks drifting to a different wording by row 200.
+- Extend the two-file split to one file per top-level section (one per `==Heading==` in the source), and track each with `TaskCreate` — one task per section, marked complete as it's written, in source order. A 2,000-line, 16-section article is exactly the case the two-file split doesn't scale to; per-section files bound each write to a safe size and make the job checkpointed and resumable if it spans a long session.
+- Flag/origin templates (`{{SRB}}`, `{{USSR}}`, `{{Flag|Czechoslovakia}}`, …) need the same existence check as any other template — batch them in one `action=query&titles=Stampa:SRB|Stampa:YUG|…` call, don't assume the whole family carries over uniformly. Most IOC-style codes do exist on sqwiki, but codes that are common on enwiki and rare elsewhere can be missing even when the underlying `Country data` page is present — `{{URS}}` (USSR) and `{{CZS}}` (Czechoslovakia) were both missing in one job while `{{USSR}}` and `{{flag|Czechoslovakia}}` worked. Check for a working alternative via `{{Flag|Country}}`/`{{Flagicon|Country}}` (these call `Stampa:Country data X` directly) before concluding the template needs to be dropped.
+- A sibling article that only *partially* covers the same subject — a country's general military article summarizing a handful of items from the full list you're translating — is worth fetching in full before drafting. It can hand you the confirmed title, a working link convention for topics sqwiki hasn't covered (see the interwiki-fallback note above), and a batch of pre-vetted terminology in a single read. This is a bigger efficiency win here than the per-term nearby-article checks described in "Check nearby sqwiki articles" would suggest on their own — check for one even when the main topic doesn't have its own sqwiki article yet.
+
+**Audit the assembled file with `grep`, not by `Read()`-ing it back in full.** You already have every part's content from writing it — re-reading a 150 KB+ concatenated file burns tens of thousands of tokens for no new information, and past a certain size it gets silently paginated/truncated by the read tool, forcing a second call just to see the rest. The grep commands below *are* the verification; they catch what a skim-read would miss anyway (a `Read()` of 700+ lines does not reliably surface a missing `|language=` tag or a leftover `{{cn}}`), so there's no accuracy tradeoff for skipping the full read. Cheap checks that catch real errors:
 
 ```
 grep -o 'language=[a-z, ]*' FILE | sort | uniq -c        # language spread
@@ -250,9 +306,10 @@ grep -o '{{Sfn' FILE | wc -l ; grep -c '^\* {{cite' FILE  # sfn calls vs bibliog
 grep -c '\[\[File:' FILE                                   # inline images present
 grep -o '{{\(langx\|efn-ua\|harvnb\|cite SEP\|font color\)' FILE | sort -u  # leftover enwiki templates
 grep -c 'llogari' FILE                                     # "accounts" mistranslation check
+grep -c '^|-' FILE                                          # table row count, compare to source
 ```
 
-Report the counts. They are the evidence that the citation apparatus survived. The image count should be non-zero for any article-length piece; zero means images were dropped.
+Report the counts. They are the evidence that the citation apparatus survived. The image count should be non-zero for any article-length piece; zero means images were dropped. For a table-heavy article, also diff the `^|-` count and the `^==` section-heading count against the same greps run on the source file — a mismatch means a row or a whole section got dropped during assembly, which a spot-check of the rendered tables alone can miss.
 
 **High-traffic and quality-rated articles need a heads-up.** Replacing an existing sq article with a 100 KB translation is a big, visible edit. Suggest a talk-page note first.
 
