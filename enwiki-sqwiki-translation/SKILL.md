@@ -1,6 +1,6 @@
 ---
 name: enwiki-sqwiki-translation
-version: beta2
+version: beta3
 description: Translate English Wikipedia articles into Albanian as paste-ready wikitext for sq.wikipedia, with source languages marked in every citation, ISO dates, Albanian number formatting, and dual transliteration of Slavic and non-Latin names. Use this skill whenever the user asks to translate a Wikipedia article, mentions sqwiki / sq.wiki / Albanian Wikipedia, pastes wikitext or a Wikipedia URL and asks for it "in Albanian", or asks to check redlinks, template existence, or citation language parameters in an Albanian article — even if they only say "translate this" and the source is obviously a Wikipedia article.
 ---
 
@@ -34,6 +34,10 @@ Either way, save the result to a local file (`ARTICLE_enwiki_raw.wiki`) before t
 If both raw-wikitext routes fail and you have to fall back to the rendered page — fetch the normal article URL and parse what you get — it is workable but degraded, and you must say so. Citation parameters that don't render (`|url-status=`, `|via=`, `|display-authors=`) are invisible, short-form `{{sfn}}` citations arrive as bare "Author Year, p. N" that you are reconstructing by inference, and the infobox arrives as a flattened list where you can't see which parameter held what. Flag reconstructed citations as needing a check against the source.
 
 **Check whether the sq article already exists.** Fastest route is the Wikidata item: its sitelink list names the sqwiki article if there is one, and its absence is equally informative. This works for articles exactly as it does for templates, in one search. Fall back to a web search for the likely Albanian title. If the article exists, this is a rewrite, not a new page — say so, because it changes how the user approaches saving, and the existing article may have a usable infobox or categories worth keeping.
+
+If checking several titles against Wikidata, batch them into one `wbgetentities?sites=enwiki&titles=A|B|C` call rather than looping one request per title — looping hits rate limits after roughly 15–20 rapid requests, and the resulting empty/non-JSON response can look like a legitimate "no sitelink" result to a naive parser, wrongly reporting real articles as missing. See `references/sqwiki-verified.md` for the batching pattern.
+
+**A rewrite target's existing content is not pre-verified.** An infobox template and its parameter names can be trusted if they are visibly rendering correctly on the live page — that's proof the template and params work. But individual wikilinks *inside* that existing article are not proof of anything; treat them exactly like your own draft's links and verify them. A live article can render fine while linking to several redlinks.
 
 **Attribution is required.** sqwiki content is CC BY-SA; a translation is a derivative work. Tell the user to credit `en:Article name` and the oldid — the `revid` captured during the fetch above — in the edit summary (or use sqwiki's translation template). Mention this once, at the end.
 
@@ -113,6 +117,15 @@ Common error pattern: writing `dialogët` / `dialogëve` (treating it like a nat
 
 Assume nothing about what exists on sqwiki. Guessed titles produce redlinks that look authoritative and get copied around.
 
+**Verify before drafting, not after — batch, don't loop.** The costly failure mode is translating optimistically (linking everything that looks plausible) and then auditing the finished draft to find and fix redlinks. That produces multiple correction passes: a first sweep catches the obvious misses, then a second catches case-mismatched or inflected forms that slipped through, then a third catches whatever the first two missed. Each pass is redundant tool round-trips. Do it once instead:
+
+1. Before writing any prose, `grep -oE '\[\[[^]|#]+(\|[^]]+)?\]\]' SOURCE.wiki` to pull every wikilink target out of the source article.
+2. Triage the list: skip one-off name-drops (a historian cited once, a publisher, an obscure crater) — these are never worth verifying, go straight to plain text for them. Keep recurring concepts, central proper nouns, and anything you're translating a guessed Albanian rendering for.
+3. Batch-check the survivors against sqwiki's `action=query&titles=A|B|C` (up to 50 titles per call, `redirects=1`) — 2–3 calls covers most articles. For Wikidata sitelink checks specifically, batch the same way (`wbgetentities?sites=enwiki&titles=A|B|C`); looping one title per request hits rate limits after ~15–20 calls and a naive parser reads the resulting empty response as "no article," a false negative that silently unlinks real topics.
+4. Only then draft, using the verified list to decide link vs. plain text per term.
+
+**Watch for false confidence from MediaWiki's case-folding.** MediaWiki only auto-capitalizes the *first character* of a title. `[[proteina]]` correctly resolves to `Proteina` — but an inflected or genitive Albanian form does not get the same courtesy: `[[kolerës]]` will NOT resolve just because `Kolera` exists, `[[tifos]]` will NOT resolve just because `Tifoja` exists. Check the literal bracketed string you're about to ship, not the lemma you have in your head. This is also why a redirect can trap you the other way: `[[virus]]` on sqwiki silently redirects to *Virusi kompjuterik* (computer virus), not the biological concept — a plausible-looking title resolving to the wrong topic is exactly the class of error batch verification exists to catch, and it will not show up as a redlink, so a "just check for red" review pass misses it entirely.
+
 **Templates: check Wikidata sitelinks.** Search `wikidata "Template:X" sqwiki` — the sitelink list on the Wikidata item names the sqwiki equivalent (`Stampa:…`) if there is one. This is fast and definitive. `references/sqwiki-verified.md` holds results already confirmed this way; read it before searching, and add to it as you verify more.
 
 **Articles: search for the Albanian title.** The result URL confirms both existence and exact title, including surprises like `Çetina` vs `Cetina`.
@@ -145,11 +158,13 @@ The talk page often has a documented parameter table. `references/sqwiki-verifie
 | `{{cite SEP}}`, `{{cite IEP}}`, `{{NINDS}}` | plain `cite web` with the real URL |
 | bundled `{{harvnb}}` inside one `<ref>` | consecutive `{{Sfn}}` calls |
 
-The harvnb→Sfn swap has a visible cost: one footnote holding six sources becomes six footnotes, inflating the citation count. `Stampa:Harvnb` probably exists wherever `Stampa:Sfn` does — verify it and keep the bundles if you can.
+The harvnb→Sfn swap has a visible cost: one footnote holding six sources becomes six footnotes, inflating the citation count. `Stampa:Harvnb` is now confirmed present (verified 2026-08-01) — you don't need to expand bundles, just verify it's still there.
 
-**When you can't verify, don't guess.** For a short article, verify every link. For a long one, verification of 150 links is not feasible: link only titles you are confident about, leave the rest as plain text rather than seeding redlinks, and list what you left unlinked. Prefer under-linking to a page full of red.
+**When you can't verify, don't guess.** For a short article, verify every link. For a long one, verification of 150 links is not feasible: link only titles you are confident about, leave the rest as plain text rather than seeding redlinks, and list what you left unlinked. Prefer under-linking to a page full of red. A Featured-Article-length biography can easily surface 200+ distinct wikilink targets; most of those are one-off citations of individual scholars, publishers, or minor named features — don't attempt to verify those at all, they're not worth a search. Reserve verification budget for names and concepts that recur, or that anchor a section.
 
-Also drop enwiki project furniture that has no sqwiki counterpart: `{{Short description}}`, `{{Use dmy dates}}`, `{{cs1 config}}`, `{{TOC limit}}`, `{{About}}`, `{{Distinguish}}`, maintenance tags, navboxes, `{{Authority control}}`, `{{Portal bar}}`. Expand any template that only wraps a citation (e.g. `{{NINDS}}`) into a plain `cite web`.
+Also drop enwiki project furniture that has no sqwiki counterpart: `{{Short description}}`, `{{Use dmy dates}}`, `{{cs1 config}}`, `{{TOC limit}}`, `{{About}}`, `{{Distinguish}}`, maintenance tags, `{{Authority control}}`, `{{Portal bar}}`. Expand any template that only wraps a citation (e.g. `{{NINDS}}`) into a plain `cite web`.
+
+**Navboxes: drop enwiki-topic imports, but check for sqwiki-native curated lists first.** The blanket "drop navboxes" instinct is right for a navbox that mirrors an enwiki category (e.g. `{{Vaccines}}`, `{{Ancient Greek mathematics}}`) — there's rarely a sqwiki equivalent and it's not worth building one. But some sqwiki articles carry a *locally authored* navbox curating a topic cluster specific to that wiki (e.g. an "ancient and medieval Mediterranean authors" template linking dozens of related sq articles). If the subject you're translating already appears in such a template, keep it — it's real, working, sqwiki-native navigation, not an import. Tell the two apart by fetching the template's raw wikitext: an enwiki mirror will closely match the English navbox's structure and topic list; a native one won't.
 
 ## Images
 
@@ -213,7 +228,7 @@ Don't silently "fix" the source. If enwiki has a vague antecedent ("Later that d
 
 Not every step in this workflow needs the same amount of reasoning. Match effort to the step:
 
-- **Mechanical steps — do directly, don't escalate.** Fetching wikitext, running a single Wikidata-sitelink search, a `grep` audit count, checking whether one template page exists: these are lookups, not judgment calls. Doing them as a heavier model or a spawned subagent is wasted cost for no better result.
+- **Mechanical steps — do directly, don't escalate.** Fetching wikitext, running a batched Wikidata-sitelink or article-titles check, a `grep` audit count, checking whether one template page exists: these are lookups, not judgment calls. Doing them as a heavier model or a spawned subagent is wasted cost for no better result. But "mechanical" doesn't mean "skip planning" — batch the lookups (see "Verify link targets and templates" above) rather than repeating the same category of check three times because the first pass wasn't comprehensive. An unplanned mechanical step repeated three times costs more than a planned one done once, even though each individual check is cheap.
 - **Judgment steps — this is where a heavier model earns its cost.** Title direction and case (agent vs. object in a genitive), inflecting wikilink display text to match sentence case, disambiguating vocabulary (`llogaritë` vs. `dëshmi` vs. `burime`), reconciling terminology against a nearby sqwiki article's existing wording, spotting an `{{Sfnmp}}` parameter collision — these require actually reasoning about Albanian grammar and about what the source means, and are where mistakes are both likely and costly to unwind later.
 - **If delegating a sub-task to a subagent** (e.g., a batch of link-existence checks across a long article), a lighter/faster model is normally sufficient — it's the same lookup work, just parallelized. Reserve a heavier model for a subagent only if you're asking it to make a translation or grammar judgment, not just verify a fact.
 
