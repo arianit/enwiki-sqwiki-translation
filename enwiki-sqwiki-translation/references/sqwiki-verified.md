@@ -18,6 +18,7 @@ Confirmed by Wikidata sitelinks (templates) or by a search result URL (articles)
 | `{{Lang-xx}}` variants | `Stampa:Lang-it`, `Stampa:Lang-sv`, `Stampa:Lang-jp` etc. — the family exists; check the specific code |
 | `{{Link language}}` (marks an external link's language) | `Stampa:Ikonë gjuha` |
 | Translation-attribution notice (talk page) | `Stampa:Përkthyer nga` — params: `1=`source lang code, `2=`exact enwiki title, `3=`date in Albanian prose (`28 korrik 2026`), `4=`revid. Place on `Diskutim:` page; it self-detects and warns if pasted into the article namespace instead. Full pattern and worked example in the "Attribution is required" section of SKILL.md. |
+| `{{Commons category}}` | `Stampa:Commonskat` — params: `1=`literal Commons category name (unchanged), `2=`display text, which must be in the definite (i shquar) form, not indefinite (`{{Commonskat|Art|Artin}}` → "...materiale multimediale në lidhje me Artin", not `Art`) |
 
 CS1 citation templates (`cite web`, `cite book`, `cite journal`, `cite news`, `citation`) and `{{Reflist}}` are in active use on sqwiki — Module:Citation/CS1 is installed.
 
@@ -78,6 +79,18 @@ sqwiki's `Module:Citation/CS1` has `grc` in `lang_tag_remap` but the correspondi
 **Fix:** remove `|language=grc` from all cite templates. Perseus and TLG links make the Greek context obvious. Do not substitute `|language=el` (Modern Greek — wrong).
 
 This affects exactly the number of `|language=grc` cite templates in the article. Count them with `grep -c 'language=grc' FILE` and expect that many errors if you leave them in.
+
+### `{{Harvc}}` is broken — page exists, underlying module doesn't (verified 2026-08-03)
+
+`Stampa:Harvc` returns 200 and wraps `{{#invoke:Harvc|...}}`, but `Moduli:Harvc` itself is a 404. Every `{{harvc}}` call renders:
+
+> Script error: No such module "Harvc"
+
+This bit an article that used enwiki's nested bibliography pattern — a parent `{{Cite book}}` entry for an edited volume, with `** {{harvc|last=X|c=Chapter|in=ParentKey|year=Y|pages=P}}` children for each chapter, relying on Harvc to inherit the parent's title/publisher/isbn/editor fields. None of those children rendered; the whole bibliography showed nothing but script errors.
+
+**Fix:** expand every `{{harvc}}` into a standalone `{{Cite book}}` that repeats the parent volume's shared fields (`title`, `publisher`, `location`, `isbn`, `volume`, `series`, `editor-last`/`editor-first` etc.) directly, plus the child's own `chapter`, `pages`, and `last`/`first`. To preserve the exact CITEREF anchor that `{{Sfn}}`/`{{Sfnp}}` calls in the article body expect (especially where the source used `anchor-year=` to disambiguate multiple works by the same author in the same year, e.g. `Haldon 2008a` vs `Haldon 2008b`), add an explicit `|ref={{sfnref|Last|Year}}` — do not rely on CS1's automatic anchor generation from `|date=`, since the anchor-year suffix (`2008a`) is not a valid date value.
+
+`{{Sfn}}`, `{{Sfnp}}`, `{{Sfnm}}`, `{{SfnRef}}`, and `Moduli:Footnotes` (which all of these depend on) are separately confirmed working — only `Harvc` itself is broken. Confirm `{{harvc}}` is gone from a finished article with `grep -c harvc FILE` (expect 0) before treating the bibliography as done.
 
 ## Article titles confirmed
 
