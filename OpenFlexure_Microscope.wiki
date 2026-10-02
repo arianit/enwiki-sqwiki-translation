@@ -1,0 +1,39 @@
+{{Short description|Open-source 3D-printed laboratory microscope}}
+{{Use dmy dates|date=October 2026}}
+The '''OpenFlexure Microscope''' is an [[open-source hardware|open-source]], [[3D printing|3D-printed]] laboratory [[microscope]] with motorised sample positioning and focus control. It was developed by a team led by [[Richard Bowman]] at the [[University of Bath]], and is designed so that it can be built and maintained in places where commercial research microscopes are too expensive or difficult to service.<ref name="Collins2020">{{cite journal |last1=Collins |first1=Joel T. |last2=Knapper |first2=Joe |last3=Stirling |first3=Julian |last4=Mduda |first4=Joram |last5=Mkindi |first5=Catherine |last6=Mayagaya |first6=Valeriana |last7=Mwakajinga |first7=Grace A. |last8=Nyakyi |first8=Paul T. |last9=Sanga |first9=Valerian L. |last10=Carbery |first10=Dave |last11=White |first11=Leah |last12=Dale |first12=Sara |last13=Lim |first13=Zhen Jieh |last14=Baumberg |first14=Jeremy J. |last15=Cicuta |first15=Pietro |last16=McDermott |first16=Samuel |last17=Vodenicharski |first17=Boyko |last18=Bowman |first18=Richard |title=Robotic microscopy for everyone: the OpenFlexure microscope |journal=[[Biomedical Optics Express]] |date=8 April 2020 |volume=11 |issue=5 |pages=2447–2460 |doi=10.1364/BOE.385729 |pmc=7249832}}</ref>
+
+The design replaces the sliding bearings and metal rods found in many low-cost motorised stages with [[Compliant mechanism|flexure hinges]], thin sections of plastic that bend slightly to move the sample. The whole mechanism can be printed as a single part on a consumer-grade [[fused filament fabrication]] printer.<ref name="Collins2020" /> Depending on the options chosen, a basic version can be built for about US$18 (£15), while a version with a [[microscope objective]] and an embedded [[Raspberry Pi]] computer costs a couple of hundred pounds.<ref name="LabManager">{{cite web |title=Print your own laboratory-grade microscope for US$18 |url=https://www.labmanager.com/print-your-own-laboratory-grade-microscope-for-18-22583 |website=Lab Manager |access-date=2 October 2026}}</ref>
+
+== History ==
+The project grew out of Bowman's earlier work as a research fellow in the NanoPhotonics Centre at the [[University of Cambridge]], where an attempt at a low-cost automated microscope was limited by a mechanism built from linear bearings and metal rods.<ref name="MagPi">{{cite web |title=OpenFlexure Microscope |url=https://magpi.raspberrypi.com/articles/openflexure-microscope |website=The MagPi |publisher=Raspberry Pi Press |access-date=2 October 2026}}</ref> Development continued at the Centre for Photonics and Photonic Materials in the Department of Physics at the University of Bath, with [[Joel Collins]] as a lead author of the main paper.<ref name="Collins2020" /> A preprint was posted on [[bioRxiv]] in 2019,<ref>{{cite journal |last1=Collins |first1=Joel T. |title=Robotic microscopy for everyone: the OpenFlexure microscope |journal=bioRxiv |date=2019 |doi=10.1101/861856 |url=https://www.biorxiv.org/content/10.1101/861856v1}}</ref> and the peer-reviewed paper appeared in ''[[Biomedical Optics Express]]'' on 8 April 2020.<ref name="Collins2020" />
+
+The paper's authors also include collaborators in [[Tanzania]], where the design was built and tested with local partners.<ref name="Collins2020" /> According to the project's coverage in the press, more than 100 microscopes had been produced in Tanzania and [[Kenya]] for educational, scientific and clinical use.<ref name="LabManager" />
+
+== Design ==
+=== Hardware ===
+The high-resolution version consists of a motorised XY stage and motorised focus, a [[Raspberry Pi]] camera module as the image sensor, and an optics module that takes a standard RMS-threaded microscope objective. The mechanism is compact and weighs about 500 g.<ref name="Collins2020" /> The motors are controlled by a Raspberry Pi, which also records images.<ref name="MagPi" />
+
+Options described by the developers include transmission and reflection illumination, [[polarization (waves)|polarisation]] contrast, and [[fluorescence microscopy|epi-fluorescence]] imaging.<ref name="Collins2020" /><ref name="LabManager" /> A later variant, the '''OpenFlexure Delta Stage''', uses a three-axis stage that moves the sample while the objective stays fixed, and has been used for multi-modal imaging.<ref>{{cite arXiv |title=Multi-modal microscopy imaging with the OpenFlexure Delta Stage |eprint=2112.05804 |date=2021}}</ref>
+
+=== Software ===
+The microscope is controlled by an open-source software stack based on the [[Web of Things]]. It provides a web interface and a programming interface, so that experiments such as automated scanning and image stitching can be scripted.<ref>{{cite arXiv |title=Modern Microscopy with the Web of Things: The OpenFlexure Microscope Software Stack |eprint=2101.00933 |date=2021}}</ref>
+
+== Uses ==
+The developers designed the microscope for teaching laboratories, research, and clinical work in low-resource settings, as well as for use at home.<ref name="MagPi" /><ref name="Collins2020" /> Because the designs and assembly instructions are published openly, the instrument can be modified by users, and manufacturing can be done locally.<ref name="Collins2020" />
+
+== See also ==
+* [[Open-source hardware]]
+* [[Foldscope]]
+* [[Low-cost scientific equipment]]
+
+== References ==
+{{Reflist}}
+
+== External links ==
+* [https://openflexure.org Official website]
+
+[[Category:Microscopes]]
+[[Category:Open-source hardware]]
+[[Category:3D printing]]
+[[Category:Laboratory equipment]]
+[[Category:University of Bath]]
