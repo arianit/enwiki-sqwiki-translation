@@ -7,7 +7,7 @@ description: Translate English Wikipedia articles into Albanian as paste-ready w
 
 Produce a complete Albanian wikitext file that an experienced sq.wikipedia editor can paste with minimal cleanup, plus an honest report of what could not be verified.
 
-The deliverable is a `.wiki` file in the outputs directory, not chat prose. Wikitext in a chat bubble is awkward to copy and loses formatting.
+The deliverable is a `.wiki` file in the outputs directory (the working directory if there is none), not chat prose. Wikitext in a chat bubble is awkward to copy and loses formatting.
 
 ## Check enwiki's quality class before defaulting to it as the source
 
@@ -44,16 +44,16 @@ Pull `.query.pages[0].revisions[0].revid` out of the same response and hold onto
 **Fallback: `?action=raw`**, if the API call fails or `jq` isn't available. It returns the wikitext directly as plain text — no JSON to unwrap — but does not give you the revid, so you'd need a separate call (`action=query&prop=revisions&rvprop=ids`) to get one for attribution:
 
 ```
-curl -s "https://en.wikipedia.org/wiki/ARTICLE_NAME?action=raw"
+curl -s -A "your-tool-name/1.0 (contact-info)" "https://en.wikipedia.org/wiki/ARTICLE_NAME?action=raw"
 ```
 
 Either way, save the result to a local file (`ARTICLE_enwiki_raw.wiki`) before translating. This avoids re-fetching and gives you a reference to diff against.
 
 If both raw-wikitext routes fail and you have to fall back to the rendered page — fetch the normal article URL and parse what you get — it is workable but degraded, and you must say so. Citation parameters that don't render (`|url-status=`, `|via=`, `|display-authors=`) are invisible, short-form `{{sfn}}` citations arrive as bare "Author Year, p. N" that you are reconstructing by inference, and the infobox arrives as a flattened list where you can't see which parameter held what. Flag reconstructed citations as needing a check against the source.
 
-**Check whether the sq article already exists.** Fastest route is the Wikidata item: its sitelink list names the sqwiki article if there is one, and its absence is equally informative. This works for articles exactly as it does for templates, in one search. Fall back to a web search for the likely Albanian title. If the article exists, this is a rewrite, not a new page — say so, because it changes how the user approaches saving, and the existing article may have a usable infobox or categories worth keeping.
+**Check whether the sq article already exists.** Fastest route is the enwiki article's Albanian langlink (`prop=langlinks&lllang=sq`, see "Verify link targets and templates") or the Wikidata item's sitelinks: either names the sqwiki article if there is one, and its absence is equally informative. Fall back to a web search for the likely Albanian title. If the article exists, this is a rewrite, not a new page — say so, because it changes how the user approaches saving, and the existing article may have a usable infobox or categories worth keeping.
 
-If checking several titles against Wikidata, batch them into one `wbgetentities?sites=enwiki&titles=A|B|C` call rather than looping one request per title — looping hits rate limits after roughly 15–20 rapid requests, and the resulting empty/non-JSON response can look like a legitimate "no sitelink" result to a naive parser, wrongly reporting real articles as missing. See `references/sqwiki-verified.md` for the batching pattern.
+If checking several titles, batch them into one call rather than looping one request per title — looping hits rate limits after roughly 15–20 rapid requests, and the resulting empty/non-JSON response can look like a legitimate "no sitelink" result to a naive parser, wrongly reporting real articles as missing. See `references/sqwiki-verified.md` for the batching pattern.
 
 **A rewrite target's existing content is not pre-verified.** An infobox template and its parameter names can be trusted if they are visibly rendering correctly on the live page — that's proof the template and params work. But individual wikilinks *inside* that existing article are not proof of anything; treat them exactly like your own draft's links and verify them. A live article can render fine while linking to several redlinks.
 
@@ -72,7 +72,7 @@ Worked example: `{{Përkthyer nga|en|Archimedes|28 korrik 2026|1366588187}}`.
 The edit-summary field carries the same facts as prose, since edit summaries don't render templates:
 
 ```
-Përkthyer nga anglishtja, artikulli «EXACT_ENWIKI_TITLE», versioni i datës DATË_SHQIP (rev. REVID).
+Përkthyer nga anglishtja, sipas artikullit en:EXACT_ENWIKI_TITLE, versioni i datës DD MUAJ YYYY (revizioni REVID).
 ```
 
 **End every output file with a trailing, HTML-comment-wrapped block** holding both ready-to-copy pieces, so it stays inert if the whole file is pasted straight into the article:
@@ -114,7 +114,7 @@ Before settling on a rendering for a specialized term, an institution, a recurri
 This matters most for:
 - **Recurring named concepts** that appear more than once in the article (a named battle, a school of thought, a recurring institution) — inconsistent renderings across occurrences look worse than a single wrong one.
 - **Terms shared with other articles on the same topic cluster** — if you're translating one Socratic-dialogue-adjacent article, sqwiki likely already has others, and they should agree with each other.
-- **Names and terms you're least confident about** — when in doubt, this check is faster than reasoning about grammar from first principles, and it's exactly what the loanword-plural and vocabulary tables above are precedent for.
+- **Names and terms you're least confident about** — when in doubt, this check is faster than reasoning about grammar from first principles, and it's exactly what the loanword-plural and vocabulary tables below are precedent for.
 
 Confirm the context matches before borrowing a term — the same English word can map to different Albanian words depending on sense (see "Vocabulary choices" below), so check that the existing article uses it the same way you need it, not just that the word appears somewhere on sqwiki.
 
@@ -169,22 +169,30 @@ Assume nothing about what exists on sqwiki. Guessed titles produce redlinks that
 
 **Verify before drafting, not after — batch, don't loop.** The costly failure mode is translating optimistically (linking everything that looks plausible) and then auditing the finished draft to find and fix redlinks. That produces multiple correction passes: a first sweep catches the obvious misses, then a second catches case-mismatched or inflected forms that slipped through, then a third catches whatever the first two missed. Each pass is redundant tool round-trips. Do it once instead:
 
-1. Before writing any prose, `grep -oE '\[\[[^]|#]+(\|[^]]+)?\]\]' SOURCE.wiki` to pull every wikilink target out of the source article.
-2. Triage the list: skip one-off name-drops (a historian cited once, a publisher, an obscure crater) — these are never worth verifying, go straight to plain text for them. Keep recurring concepts, central proper nouns, and anything you're translating a guessed Albanian rendering for.
-3. Batch-check the survivors against sqwiki's `action=query&titles=A|B|C` (up to 50 titles per call, `redirects=1`) — 2–3 calls covers most articles. For Wikidata sitelink checks specifically, batch the same way (`wbgetentities?sites=enwiki&titles=A|B|C`) — same rate-limit risk as the Wikidata check above.
-4. Only then draft, using the verified list to decide link vs. plain text per term.
+1. Before writing any prose, pull every unique wikilink target out of the source, minus files, categories and interwiki prefixes:
+   ```
+   grep -oE '\[\[[^]|#]+' SOURCE.wiki | sed -E 's/^\[\[ *//; s/ *$//' \
+     | grep -viE '^:?(file|image|category|wikt|wiktionary|commons|[a-z]{2}):' | sort -u > targets.txt
+   ```
+2. Triage the list: one-off name-drops (a historian cited once, a publisher, an obscure crater) stay plain text and need no check. Keep recurring concepts, central proper nouns, and anything you're translating a guessed Albanian rendering for.
+3. Batch-check the survivors against the **enwiki** API's Albanian langlinks, 50 titles per call:
+   ```
+   curl -s -A "your-tool-name/1.0 (contact-info)" "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&redirects=1&prop=langlinks&lllang=sq&lllimit=max&titles=A|B|C"
+   ```
+   This is better than looking the enwiki titles up on Wikidata (`wbgetentities?sites=enwiki&titles=…`): source links often point at enwiki redirects (`[[polio]]`) or lowercase forms, which `redirects=1` resolves and the response's `normalized`/`redirects` arrays map back to what you asked for, while `wbgetentities` only matches the exact stored title and reports the rest as missing. Use sqwiki's own `action=query&redirects=1&titles=A|B|C` for Albanian titles you are guessing (Albanianized names, See-also entries). 2–3 calls cover most articles.
+4. Only then draft, using the verified list to decide sq link vs. interwiki per term.
 
-**Past ~150 unique targets, do the batching in a throwaway script, not by hand.** A single history article rarely exceeds this, but an equipment list, order-of-battle, or filmography can easily surface 400–500+ unique link targets. Hand-crafting each `curl` call for a 10-batch job wastes turns and invites the exact one-at-a-time mistake this section already warns against, just at larger scale. Instead: extract all unique targets once (`grep -oE '\[\[[^]|#]+' SOURCE.wiki | sed -E 's/^\[\[//' | sort -u > targets.txt`), then run one small Python (or shell) loop that chunks the list into 50-title `wbgetentities` requests, pauses briefly between batches, and writes every result — found or not — to a `target<TAB>sqwiki_title_or_empty` TSV file. That file becomes a durable lookup table: the rest of the job is `grep` against it instead of re-hitting the API, and it survives if you need to revisit a section later in the same job.
+**Past ~150 unique targets, do the batching in a throwaway script, not by hand.** A single history article rarely exceeds this, but an equipment list, order-of-battle, or filmography can easily surface 400–500+ unique link targets. Hand-crafting each `curl` call for a 10-batch job wastes turns and invites the exact one-at-a-time mistake this section already warns against, just at larger scale. Use the script in `references/sqwiki-verified.md`: it chunks `targets.txt` into 50-title requests, pauses between batches, stops on a non-JSON (rate-limited) response instead of recording false misses, and writes every result, found or not, to a `target<TAB>sqwiki_title_or_empty` TSV. That file becomes a durable lookup table: the rest of the job is `grep` against it instead of re-hitting the API.
 
-**For anything the batch check doesn't confirm, default to an interwiki link, not plain text.** You already have the exact enwiki title — you extracted it from the source, so there is no guessing involved — so `[[:en:Exact Title|Display text]]` costs nothing to verify and can never produce a redlink. It also gives the reader a real path to information sqwiki doesn't cover yet, which plain unlinked text doesn't. This is a stronger default than "leave as plain text" specifically for articles dense with proper nouns unlikely to have individual sqwiki coverage — equipment models, unit designations, named systems, minor filmography entries — where sqwiki coverage will be sparse but the enwiki target is never in doubt. Reserve genuine plain text for terms that add nothing when linked (a generic adjective, a one-off descriptor with no article-worthy topic behind it).
+**For a kept target the batch check doesn't confirm, default to an interwiki link, not plain text.** You already have the exact enwiki title — you extracted it from the source, so there is no guessing involved — so `[[:en:Exact Title|Display text]]` costs nothing to verify and can never produce a redlink. It also gives the reader a real path to information sqwiki doesn't cover yet, which plain unlinked text doesn't. This is a stronger default than "leave as plain text" specifically for articles dense with proper nouns unlikely to have individual sqwiki coverage — equipment models, unit designations, named systems, minor filmography entries — where sqwiki coverage will be sparse but the enwiki target is never in doubt. Reserve genuine plain text for terms that add nothing when linked (a generic adjective, a one-off descriptor with no article-worthy topic behind it).
 
-**A "MISSING" Wikidata sitelink is not proof a small utility template doesn't exist.** Wikidata sitelinks only tell you two pages are *linked as the same item* — plenty of narrow-purpose formatting templates (`{{Nbsp}}`, `{{Anchor}}`-style one-liners) never get a Wikidata item connecting them across wikis at all, so a batched `wbgetentities` check reports them `MISSING` even when the sqwiki page exists and works fine. Before treating that as a real gap: check whether the template has a zero-cost native substitute (`&nbsp;` needs no template regardless of what `{{Nbsp}}` resolves to), and only spend a direct `?action=raw` fetch confirming/denying existence if there is no substitute and the template is actually going to be used repeatedly.
+**A missing langlink or Wikidata sitelink is not proof a template doesn't exist.** Sitelinks only tell you two pages are *linked as the same item*; plenty of narrow-purpose formatting templates (`{{Nbsp}}`, `{{Anchor}}`-style one-liners) are never connected across wikis, so they show as missing even when the sqwiki page exists and works fine. The direct check below settles it.
 
 **Watch for false confidence from MediaWiki's case-folding.** MediaWiki only auto-capitalizes the *first character* of a title. `[[proteina]]` correctly resolves to `Proteina` — but an inflected or genitive Albanian form does not get the same courtesy: `[[kolerës]]` will NOT resolve just because `Kolera` exists, `[[tifos]]` will NOT resolve just because `Tifoja` exists. Check the literal bracketed string you're about to ship, not the lemma you have in your head. This is also why a redirect can trap you the other way: `[[virus]]` on sqwiki silently redirects to *Virusi kompjuterik* (computer virus), not the biological concept — a plausible-looking title resolving to the wrong topic is exactly the class of error batch verification exists to catch, and it will not show up as a redlink, so a "just check for red" review pass misses it entirely.
 
-**Templates: check Wikidata sitelinks.** Search `wikidata "Template:X" sqwiki` — the sitelink list on the Wikidata item names the sqwiki equivalent (`Stampa:…`) if there is one. This is fast and definitive. `references/sqwiki-verified.md` holds results already confirmed this way; read it before searching, and add to it as you verify more.
+**Templates: read `references/sqwiki-verified.md` first, then check the rest in one call.** For existence, query sqwiki directly: `action=query&redirects=1&titles=Stampa:A|Stampa:B|…` — a `missing` flag is definitive. A missing template under its English name may still exist under a translated one; the enwiki template's Wikidata sitelinks (or `prop=langlinks&lllang=sq` on `Template:X` at enwiki) find that name. Add what you confirm to the reference file.
 
-**Articles: search for the Albanian title.** The result URL confirms both existence and exact title, including surprises like `Çetina` vs `Cetina`.
+**Without API access, search for the Albanian title.** The result URL confirms both existence and exact title, including surprises like `Çetina` vs `Cetina`.
 
 **sqwiki sometimes translates the template name, sometimes not.** `Stampa:Infobox military conflict` and `Stampa:Infobox medical condition` keep the English name, but the philosopher infobox is `Stampa:Infobox filozof`. There is no rule — check each one. Never assume the enwiki name carries over just because a sibling template did.
 
@@ -206,17 +214,16 @@ The talk page often has a documented parameter table. `references/sqwiki-verifie
 | enwiki | safe substitute |
 |---|---|
 | `{{efn-ua}}` / `{{notelist-ua}}` | `<ref group="sh">…</ref>` + `{{Reflist|group=sh}}` |
-| `{{blockquote}}` | `<blockquote>…</blockquote>` |
 | `{{small}}` | `<small>…</small>` |
 | `{{Transliteration|grc|x}}` | `''x''` |
 | `{{langx|grc|Χ|Y}}` | `(greqishtja e vjetër: Χ, ''Y'')` |
 | `{{font color}}` in tables | the colour word in plain Albanian |
 | `{{cite SEP}}`, `{{cite IEP}}`, `{{NINDS}}` | plain `cite web` with the real URL |
-| bundled `{{harvnb}}` inside one `<ref>` | consecutive `{{Sfn}}` calls |
+| `{{harvc}}` | standalone `{{Cite book}}`; `Stampa:Harvc` exists but its module doesn't (details in the reference file) |
 
-The harvnb→Sfn swap has a visible cost: one footnote holding six sources becomes six footnotes, inflating the citation count. `Stampa:Harvnb` is now confirmed present (verified 2026-08-01) — you don't need to expand bundles, just verify it's still there.
+`{{Blockquote}}` and `{{Harvnb}}` (including bundled harvnb refs) are confirmed present, so keep them as they are.
 
-**When you can't verify, don't guess.** For a short article, verify every link. For a long one, verification of 150 links is not feasible: link only titles you are confident about, leave the rest as plain text rather than seeding redlinks, and list what you left unlinked. Prefer under-linking to a page full of red. A Featured-Article-length biography can easily surface 200+ distinct wikilink targets; most of those are one-off citations of individual scholars, publishers, or minor named features — don't attempt to verify those at all, they're not worth a search. Reserve verification budget for names and concepts that recur, or that anchor a section.
+**When you can't verify, don't guess.** This applies when you have no API access and every check is a web search. For a short article, verify every link. For a long one, verification of 150 links is not feasible: link only titles you are confident about, leave the rest as plain text rather than seeding redlinks, and list what you left unlinked. Prefer under-linking to a page full of red. A Featured-Article-length biography can easily surface 200+ distinct wikilink targets; most of those are one-off citations of individual scholars, publishers, or minor named features — don't attempt to verify those at all, they're not worth a search. Reserve verification budget for names and concepts that recur, or that anchor a section.
 
 **Exception: `== Shiko edhe ==` (See also) entries are always wikilinks — but verify earnestly first, don't just bracket a guess.** The under-linking default above is for body prose, where an unverified bracket reads as a mistake; a See-also list is different, since its whole function is to name related topics whether or not sqwiki has written them yet, and a red link there is a normal, useful signal ("this topic exists, no article yet") rather than an error.
 
@@ -226,7 +233,7 @@ That said, a See-also list is a direct recommendation to the reader, so it's wor
 
 **`{{Commonskat}}`'s second parameter must also be in the definite (i shquar) form** — same convention as above, applied to the display text it renders into prose. `{{Commonskat|Art|Artin}}` renders "Wikimedia Commons ka materiale multimediale në lidhje me Artin." (not the indefinite `Art`). The first parameter is the literal Commons category name (unchanged); only the second, display parameter gets inflected.
 
-Also drop enwiki project furniture that has no sqwiki counterpart: `{{Short description}}`, `{{Use dmy dates}}`, `{{cs1 config}}`, `{{TOC limit}}`, `{{About}}`, `{{Distinguish}}`, maintenance tags, `{{Authority control}}`, `{{Portal bar}}`. Expand any template that only wraps a citation (e.g. `{{NINDS}}`) into a plain `cite web`.
+Also drop enwiki project furniture, even where sqwiki has a page of the same name: `{{Short description}}`, `{{Use dmy dates}}`, `{{cs1 config}}`, `{{TOC limit}}`, `{{About}}`, `{{Distinguish}}`, maintenance tags, `{{Authority control}}`, `{{Portal bar}}`. Expand any template that only wraps a citation (e.g. `{{NINDS}}`) into a plain `cite web`.
 
 **Navboxes: drop enwiki-topic imports, but check for sqwiki-native curated lists first.** The blanket "drop navboxes" instinct is right for a navbox that mirrors an enwiki category (e.g. `{{Vaccines}}`, `{{Ancient Greek mathematics}}`) — there's rarely a sqwiki equivalent and it's not worth building one. But some sqwiki articles carry a *locally authored* navbox curating a topic cluster specific to that wiki (e.g. an "ancient and medieval Mediterranean authors" template linking dozens of related sq articles). If the subject you're translating already appears in such a template, keep it — it's real, working, sqwiki-native navigation, not an import. Tell the two apart by fetching the template's raw wikitext: an enwiki mirror will closely match the English navbox's structure and topic list; a native one won't.
 
@@ -242,11 +249,7 @@ Translate the caption fully, including any embedded links (verify sqwiki link ta
 
 **Do not translate reference work titles (book, journal, website names)** — keep them in the original language. If you wish to provide a translation for context, add it in parentheses after the original title within the `title=` parameter (not as a separate `trans-title`). For example: `title=High Albania (Shqipëria e Lartë)`. This matches sqwiki editorial practice.
 
-**Known CS1 Lua bug on sqwiki: `|language=grc` crashes.** sqwiki's Module:Citation/CS1 has `grc` (Ancient Greek) in `lang_tag_remap` but the corresponding `lang_name_remap` entry is broken or missing. Every cite template with `|language=grc` throws:
-
-> Lua error te Moduli:Citation/CS1 te rreshti 1763: attempt to index field '?' (a nil value)
-
-Fix: remove `|language=grc` from all cite templates. For Perseus or TLG links the Greek-language context is obvious. If you need to signal the language, add a parenthetical in the `|title=` or surrounding prose instead. Do not substitute `|language=el` (Modern Greek) — that is factually wrong.
+**Never use `|language=grc`.** It crashes sqwiki's CS1 module with a Lua error (details in `references/sqwiki-verified.md`). Leave the parameter out for Ancient Greek sources; if the language needs signalling, put a parenthetical in `|title=` or the prose. Do not substitute `|language=el` (Modern Greek), which is factually wrong.
 
 **Dates: ISO for full dates only — never `YYYY-MM` for month-only.** `YYYY-MM-DD` is safe and correct wherever the source gives day+month+year. But CS1's date parser does not accept a bare year-month value with no day: `|date=2016-03` throws `Shiko vlerat e datave në: |date= (Ndihmë!)` ("check date values") on the live page — confirmed in production (2026-08-01), 43 citations broken this way in a single article from a bulk conversion that ISO-ified every date indiscriminately. For a month-only source date, leave the original English `Month YYYY` form untouched (`date=March 2016`, not `date=2016-03` and not a translated `date=mars 2016`) — CS1 recognizes English month names regardless of the wiki's language, and this format was already valid in the source you're translating from. Scope any bulk ISO conversion strictly to values that already contain a day (`\d{1,2} Month \d{4}` or similar), and scope it to `|date=`, `|archive-date=`, `|access-date=` only — never let the regex touch running prose, where dates should stay in Albanian.
 
@@ -282,7 +285,6 @@ When an sqwiki article exists for the person, link to its actual title even when
 - Section headings translated, not transliterated: `== Referime ==`, `== Burimet ==`, `== Lidhje të jashtme ==`, `== Historia ==`, `== Shoqëria dhe kultura ==`.
 - Categories in Albanian with `[[Kategoria:…]]`. Flag any category name you invented.
 - Technical vocabulary: pick one rendering per concept and hold it across the article (e.g. *imuniteti kolektiv* for herd immunity, *amnezia imunitare* for immune amnesia).
-- Era abbreviations: `p.e.s.` (para erës sonë = BC) and `e.s.` (erës sonë = AD) in prose and infoboxes. Do not hyperlink these or spell them out once the abbreviation has been introduced.
 
 ## Editorial judgement
 
@@ -323,9 +325,10 @@ When in doubt about which bucket a step falls in: if getting it wrong would only
 
 ```
 grep -o 'language=[a-z, ]*' FILE | sort | uniq -c        # language spread
-grep -o '{{Sfn' FILE | wc -l ; grep -c '^\* {{cite' FILE  # sfn calls vs bibliography entries
+grep -oi '{{sfn' FILE | wc -l ; grep -ciE '^\*+ *\{\{(cite|citation)' FILE  # sfn calls vs bibliography entries
 grep -c '\[\[File:' FILE                                   # inline images present
-grep -o '{{\(langx\|efn-ua\|harvnb\|cite SEP\|font color\)' FILE | sort -u  # leftover enwiki templates
+grep -oi '{{\(langx\|efn-ua\|harvc\|cite SEP\|font color\)' FILE | sort -u  # leftover templates that are missing or broken on sqwiki
+grep -c 'language=grc' FILE                                # crashes CS1, must be 0
 grep -c 'llogari' FILE                                     # "accounts" mistranslation check
 grep -c '^|-' FILE                                          # table row count, compare to source
 grep -coE '\bdate *= *[0-9]{4}-[0-9]{2}([^-]|$)' FILE       # bare month-only ISO dates — breaks CS1, must be 0

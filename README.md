@@ -9,7 +9,7 @@ https://github.com/arianit/enwiki-sqwiki-translation
 Given the wikitext of an enwiki article, it produces a `.wiki` file an experienced sqwiki editor can paste with minimal cleanup, plus an explicit report of what could not be verified. It handles:
 
 - **Title translation** — meaning over word order, with the genitive direction right, checked against how existing sqwiki prose already names the topic
-- **Link and template verification** — Wikidata sitelinks for templates and articles; a cache of already-confirmed targets in `references/sqwiki-verified.md`
+- **Link and template verification** — batched API checks (enwiki langlinks, sqwiki page existence); a cache of already-confirmed targets in `references/sqwiki-verified.md`
 - **Source languages** — `|language=` on every citation, since on sqwiki even English sources are foreign-language
 - **ISO dates**, Albanian number formatting (`3.852.242`, `0,2%`), Albanian section headings and categories
 - **Dual transliteration** — Albanian form with the original in parentheses on first mention, for Slavic and non-Latin names
@@ -20,7 +20,7 @@ Given the wikitext of an enwiki article, it produces a `.wiki` file an experienc
 **Claude Code** — personal scope:
 
 ```bash
-git clone https://github.com/USERNAME/enwiki-sqwiki-translation.git
+git clone https://github.com/arianit/enwiki-sqwiki-translation.git
 ln -s "$PWD/enwiki-sqwiki-translation/enwiki-sqwiki-translation" ~/.claude/skills/
 ```
 
@@ -42,8 +42,8 @@ LICENSE
 Verification is much more efficient when the assistant can reach Wikimedia hosts directly. With `en.wikipedia.org` and `sq.wikipedia.org` reachable:
 
 ```bash
-curl -s "https://en.wikipedia.org/w/index.php?title=PAGE&action=raw"        # source, no paste needed
-curl -s "https://sq.wikipedia.org/w/api.php?action=query&format=json&titles=A|B|C"   # 50 link checks per call
+curl -s -A "$UA" "https://en.wikipedia.org/w/index.php?title=PAGE&action=raw"        # source, no paste needed
+curl -s -A "$UA" "https://sq.wikipedia.org/w/api.php?action=query&format=json&titles=A|B|C"   # 50 link checks per call
 ```
 
 When network access is restricted, fall back to the cached results in `references/sqwiki-verified.md` and one-at-a-time web searches.

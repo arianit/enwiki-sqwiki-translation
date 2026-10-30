@@ -57,6 +57,14 @@ Common wrong guesses that silently lose content: `data_lindjes`, `data_vdekjes`,
 
 **Missing (verified 2026-08-01):** `Stampa:EB1911 poster`, `Stampa:Expand section` (maintenance tag; drop), `Stampa:Gpn` (Gazetteer of Planetary Nomenclature; substitute a plain external link), `Stampa:Gutenberg author` (substitute `https://www.gutenberg.org/ebooks/author/ID`), `Stampa:In Our Time`, `Stampa:InPho`, `Stampa:JSTOR` (only the bare standalone template is missing — the `|jstor=` CS1 *parameter* inside `cite` templates works fine via Module:Citation/CS1; only substitute when `{{JSTOR|ID}}` is used bare outside a citation template), `Stampa:MathPages` (substitute `https://www.mathpages.com/PATH/PATH.htm`), `Stampa:PhilPapers` (substitute `https://philpapers.org/s/QUERY`), `Stampa:Pi` (just write the literal `π` character — simpler than chasing a template name).
 
+## Templates confirmed present on sqwiki (art/sculpture batch, verified 2026-08-01)
+
+`Stampa:Rreth` (the localized name Wikidata's sitelink returns for `Template:Circa`; `Stampa:Circa` also exists, treat both as valid), `Stampa:Cite web/book/journal/news/press release`, `Stampa:Commons`, `Stampa:Convert`, `Stampa:Anchor`, `Stampa:Cite EB1911`.
+
+**Family-name trap:** `Stampa:Wiktionary kuti` is the real sqwiki name for enwiki's `{{Wiktionary}}` sister-project box — not `Stampa:Wiktionary`. Don't assume a sister-project template family (Commons/Wiktionary/Wikiquote) carries over with matching names just because `{{Commons}}` does.
+
+**Missing (verified 2026-08-01):** `Stampa:Wikiquote` (no sqwiki sitelink at all; drop it).
+
 ## Templates NOT confirmed — check before using
 
 - `{{flagicon image}}` — unverified. Flags in infoboxes are discouraged by MOS anyway; dropping the calls is a clean fallback.
@@ -64,9 +72,17 @@ Common wrong guesses that silently lose content: `data_lindjes`, `data_vdekjes`,
 - `{{langx}}` — renamed on enwiki in 2024, likely absent on sqwiki. Use plain italics: `''anglisht'': ''Title''`.
 - `{{small}}` — use `<small>…</small>`, which always works.
 - `{{efn-ua}}` / `{{notelist-ua}}`, `{{Transliteration}}`, `{{font color}}`, `{{Flatlist}}`, `{{cite SEP}}`, `{{cite IEP}}` — all unverified. See the substitution table in SKILL.md.
-- `{{lang}}` — **now confirmed as `Stampa:Lang`** (see above). `{{gjuha}}` is not the name; don't use it. Earlier drafts of this file wrongly listed both as unverified.
+- `{{gjuha}}` — **wrong name**; use `{{Lang}}` (confirmed above).
 - `{{në gjuhën}}` for marking the language of an external link — unverified; plain parenthetical works.
 - `{{Gjuha}}` — **wrong name**; the correct template is `{{Ikonë gjuha}}` (see confirmed above). Earlier drafts wrongly used `{{Gjuha|en}}` inside `<ref>` tags.
+
+## Military / equipment-list templates
+
+**Flag/origin templates need their own existence check — don't assume a whole IOC-code family carries over.** Equipment and order-of-battle articles use flag-icon templates (`{{SRB}}`, `{{USA}}`, `{{URS}}`, …) on nearly every table row. Batch-check them like any other template (`action=query&titles=Stampa:SRB|Stampa:YUG|...`). Confirmed present as of 2026-08-01: `SRB`, `YUG`, `CHN`, `USSR`, `GER`, `RUS`, `USA`, `ISR`, `FRA`, `UK`, `SWE`, `CZE`, `BEL`, `PRC`, `AUT`, `SUI`, `POL`, `FIN`, `ESP`. **Missing:** `URS` (enwiki's alternate code for the USSR — substitute `{{USSR}}`, which points at the same `Stampa:Country data Soviet Union`) and `CZS` (Czechoslovakia — substitute `{{Flag|Czechoslovakia}}` or `{{Flagicon|Czechoslovakia}}`).
+
+`Stampa:Flag` and `Stampa:Flagicon` both exist and work generically as `{{Flag|Country name}}` / `{{Flagicon|Country name}}`, resolving to `Stampa:Country data <Country name>` — useful as a fallback for any origin whose short-code template is missing or unconfirmed, since the underlying `Country data` page usually exists even when the shortcut doesn't. `Stampa:Harvid` and `Stampa:In lang` are also confirmed present (verified 2026-08-01).
+
+**A country's general military article is worth fetching whole before translating its dedicated equipment list.** `Ushtria Serbe` (the Serbian Army article) independently confirmed the title `Lista e pajisjeve të Forcave të Armatosura të Serbisë`, supplied vetted terminology (`Tank Kryesor Luftarak` → actually a redlink, corrected to the real article `Tanku kryesor i betejës`; `Automjet Luftarak i Këmbësorisë`, `Obus Vetëlëvizës`, `Transportues Personeli i Blinduar`, `Sistem raketor antitank`, `MANPADS`, `Pushkë Sulmi`, `Mitralozi`, `Pushkë Snajper`), and demonstrated the community's own convention for uncovered weapon models: direct interwiki links (`[[:en:Article|Display]]`), not plain text or invented sqwiki titles. Treat a partial-coverage sibling article as a bigger efficiency win than a single-term nearby-article check — it can hand over a whole methodology, not just one word.
 
 ## Known sqwiki CS1 module bugs
 
@@ -94,13 +110,15 @@ This bit an article that used enwiki's nested bibliography pattern — a parent 
 
 ## Article titles confirmed
 
+Rows from Sculpture onwards are the art/sculpture batch, verified 2026-08-01.
+
 | enwiki | sqwiki |
 |---|---|
 | Vaccination | *no sq article* (confirmed via Wikidata sitelinks + direct title lookup 2026-07-31); related but distinct: `Imunizimi` (translates enwiki's "Immunization", short/654 words) and `Vaksinimi i fëmijëve` both exist |
 | smallpox | `Lia` |
 | poliomyelitis / polio | `Poliomieliti` |
 | tetanus | `Tetanosi` (not `Tetanozi`) |
-| measles | `Fruthi` |
+| measles | `Fruthi` (exists, but old and unreferenced — a rewrite target) |
 | diphtheria | `Difteria` |
 | tuberculosis | `Tuberkulozi` |
 | rabies | `Tërbimi` |
@@ -134,7 +152,6 @@ This bit an article that used enwiki's nested bibliography pattern — a parent 
 | Socrates | `Sokrati` (exists; short stub — rewrite target. Confirmed via search result URL 2026-07-30) |
 | Trial of Socrates | `Gjyqi i Sokratit` (confirmed via search result URL) |
 | Socratic method | `Metoda sokratike` (confirmed via search result URL) |
-
 | Pashalik of Scutari | `Pashallëku i Shkodrës` |
 | Kara Mahmud Pasha | `Mahmud Bushati` (displays as *Kara Mahmud pashë Bushati*) |
 | Pashalik of Berat | `Pashallëku i Beratit` |
@@ -145,14 +162,12 @@ This bit an article that used enwiki's nested bibliography pattern — a parent 
 | Petar I Petrović-Njegoš | `Petri I Petroviq-Njegosh` |
 | Petar II Petrović-Njegoš | `Petri II Petroviq-Njegosh` |
 | Cetinje | `Çetina` (search result URL; displays *Cetina* — pipe it) |
-| Measles | `Fruthi` (exists, but old and unreferenced — a rewrite target) |
 | Piperi (tribe) | `Piperët` |
 | Aristotle | `Aristoteli` (exists; old) |
 | Platonic dialogues | `Dialogjet e Platonit` (confirmed via page title 2026-07-30) |
 | Aristotelian ethics | `Etika aristoteliane` |
 | Peripatetic school | `Shkolla peripatetike` |
 | Bjelopavlići | `Palabardhi (Mali i Zi)` |
-| Brda (Montenegro) region article | `Kodrat e Malit të Zi` |
 | Battle of Krusi | *no sq article*; sqwiki prose calls it `Beteja e Krusit` |
 | Principality of Montenegro | `Principata e Malit të Zi` |
 | History of Montenegro | `Historia e Malit të Zi` |
@@ -179,147 +194,6 @@ This bit an article that used enwiki's nested bibliography pattern — a parent 
 | classical antiquity | `Lashtësia klasike` (not `Antikiteti klasik`) |
 | Fields Medal | `Medalja Fields` (not `Çmimi Fields`) |
 | Pi (mathematical constant) | `Numri pi` |
-| Eudoxus of Cnidus, Eutocius of Ascalon, Gottfried Wilhelm Leibniz, Hiero II of Syracuse, Isidore of Miletus, Conon of Samos, Pappus of Alexandria, Vitruvius, Syracuse (city), Siege of Syracuse, Archimedes' screw, Claw of Archimedes, Archimedes Palimpsest, mathematical physics, hydrostatics | all *no sq article found* despite multiple spelling attempts — left as plain text |
-
-## Phrasings sqwiki uses in running prose
-
-Useful as link targets, though the article titles behind them weren't separately confirmed:
-
-- *Princi-peshkopata e Malit të Zi* — Prince-Bishopric of Montenegro
-- *Kisha Ortodokse Serbe* — Serbian Orthodox Church
-
-## Access constraints
-
-Two independent blocks. The user on this machine has enabled the egress allowlist for both wikis, so curl works — but document the default state for portability.
-
-**`web_fetch` — URL provenance.** Only URLs that appeared in a prior search or fetch result can be fetched. An enwiki article URL surfaced by `web_search` works; editing it into `?action=raw`, `/w/api.php`, `/w/rest.php/v1/page/…` or `Special:Export` does not — the edited path is treated as unseen and rejected. So the wikitext source cannot be pulled via `web_fetch` even for articles you just fetched.
-
-**`bash` / `curl` — egress allowlist.** By default, `curl` to `en.wikipedia.org` and `sq.wikipedia.org` returns `403 x-deny-reason: host_not_allowed`. The allowlist is user-configurable.
-
-**Current state for this user:** both `en.wikipedia.org` and `sq.wikipedia.org` are in the egress allowlist. Use `curl` directly:
-
-```bash
-# Fetch enwiki raw wikitext
-curl -s "https://en.wikipedia.org/wiki/ARTICLE?action=raw" > ARTICLE_enwiki_raw.wiki
-
-# Verify sqwiki article existence (up to 50 titles in one call)
-curl -s "https://sq.wikipedia.org/w/api.php?action=query&format=json&redirects=1&titles=A|B|C"
-
-# Verify existence via Wikidata sitelinks — batch multiple enwiki titles per call, don't loop one-at-a-time
-curl -s "https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=A|B|C&props=sitelinks&format=json"
-
-# Fetch sqwiki template page to verify parameters
-curl -s "https://sq.wikipedia.org/wiki/Stampa:TEMPLATE_NAME?action=raw"
-curl -s "https://sq.wikipedia.org/wiki/Stampa_diskutim:TEMPLATE_NAME?action=raw"
-
-# Fetch sqwiki CS1 module to debug Lua errors
-curl -s "https://sq.wikipedia.org/w/index.php?title=Moduli:Citation/CS1&action=raw" | sed -n 'LINE_NUMp'
-```
-
-**If curl stops working** (user revoked access or new machine), fall back to:
-- `web_search` for article existence — result URL confirms title and existence
-- `wikiwand.com/sq/...` mirrors sqwiki and appears in search results; presence there implies the sq article exists
-- Wikidata item pages are fetchable via `web_fetch` and their sitelink lists resolve both article and template existence
-- Otherwise verification is one `web_search` per target — budget accordingly, prioritise lead and infobox titles first
-
-**Propose enabling the allowlist** when starting a long article if curl is blocked. It's the single biggest quality lever: bulk link verification via the API eliminates the reason long articles end up under-linked.
-
-**Wikidata sitelink checks get silently rate-limited when done one-title-per-request.** Issuing one `wbgetentities?sites=enwiki&titles=X` call per title in a loop hits Wikidata/sqwiki rate limits after roughly 15–20 rapid requests; the response body then comes back empty or non-JSON, and a naive parser reports these as `MISSING` — a false negative that leaves real, existing sqwiki articles wrongly unlinked. Always batch multiple `enwiki` titles into one request with `|`-joined `titles=` (same mechanism as the Action API batching above), and add a short pause between batches for very long lists. Never trust a single "MISSING" result from an unbatched, rapid-fire loop — re-verify with a proper batched call before concluding a term has no sqwiki article.
-
-**At 400–500+ unique targets (equipment lists, order-of-battle, filmographies), script the batching instead of hand-writing each `curl` call.** `wbgetentities` caps at 50 titles per request, so a large list article needs 10+ batches; a short throwaway script removes the tedium and, more importantly, produces a durable TSV cache you can `grep` for the rest of the job instead of re-querying:
-
-```python
-import urllib.request, urllib.parse, json, time
-
-with open('all_link_targets.txt') as f:
-    titles = [l.strip() for l in f if l.strip()]
-
-def chunks(lst, n):
-    for i in range(0, len(lst), n):
-        yield lst[i:i+n]
-
-results = {}
-for batch in chunks(titles, 50):
-    enc = urllib.parse.quote('|'.join(batch))
-    url = f"https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles={enc}&props=sitelinks&format=json"
-    req = urllib.request.Request(url, headers={'User-Agent': 'your-tool/1.0 (contact-info)'})
-    with urllib.request.urlopen(req) as resp:
-        data = json.load(resp)
-    for ent in data.get('entities', {}).values():
-        sl = ent.get('sitelinks', {})
-        en = sl.get('enwiki', {}).get('title')
-        sq = sl.get('sqwiki', {}).get('title')
-        if en:
-            results[en] = sq
-    time.sleep(0.3)
-
-with open('link_verification.tsv', 'w') as f:
-    for t in titles:
-        f.write(f"{t}\t{results.get(t) or ''}\n")
-```
-
-Then draft against `grep -E '^(Target1|Target2|...)\t' link_verification.tsv` per section instead of re-hitting the API. Anything with a non-empty second column links directly; anything empty gets `[[:en:Exact Title|Display]]` (see the interwiki-fallback note in SKILL.md) rather than a guessed sqwiki title or bare plain text.
-
-## Military / equipment-list templates
-
-**Flag/origin templates need their own existence check — don't assume a whole IOC-code family carries over.** Equipment and order-of-battle articles use flag-icon templates (`{{SRB}}`, `{{USA}}`, `{{URS}}`, …) on nearly every table row. Batch-check them like any other template (`action=query&titles=Stampa:SRB|Stampa:YUG|...`). Confirmed present as of 2026-08-01: `SRB`, `YUG`, `CHN`, `USSR`, `GER`, `RUS`, `USA`, `ISR`, `FRA`, `UK`, `SWE`, `CZE`, `BEL`, `PRC`, `AUT`, `SUI`, `POL`, `FIN`, `ESP`. **Missing:** `URS` (enwiki's alternate code for the USSR — substitute `{{USSR}}`, which points at the same `Stampa:Country data Soviet Union`) and `CZS` (Czechoslovakia — substitute `{{Flag|Czechoslovakia}}` or `{{Flagicon|Czechoslovakia}}`).
-
-`Stampa:Flag` and `Stampa:Flagicon` both exist and work generically as `{{Flag|Country name}}` / `{{Flagicon|Country name}}`, resolving to `Stampa:Country data <Country name>` — useful as a fallback for any origin whose short-code template is missing or unconfirmed, since the underlying `Country data` page usually exists even when the shortcut doesn't. `Stampa:Harvid` and `Stampa:In lang` are also confirmed present (verified 2026-08-01).
-
-**A country's general military article is worth fetching whole before translating its dedicated equipment list.** `Ushtria Serbe` (the Serbian Army article) independently confirmed the title `Lista e pajisjeve të Forcave të Armatosura të Serbisë`, supplied vetted terminology (`Tank Kryesor Luftarak` → actually a redlink, corrected to the real article `Tanku kryesor i betejës`; `Automjet Luftarak i Këmbësorisë`, `Obus Vetëlëvizës`, `Transportues Personeli i Blinduar`, `Sistem raketor antitank`, `MANPADS`, `Pushkë Sulmi`, `Mitralozi`, `Pushkë Snajper`), and demonstrated the community's own convention for uncovered weapon models: direct interwiki links (`[[:en:Article|Display]]`), not plain text or invented sqwiki titles. Treat a partial-coverage sibling article as a bigger efficiency win than a single-term nearby-article check — it can hand over a whole methodology, not just one word.
-
-## Albanian grammar quick-reference
-
-### Loanword plurals — palatalization before `-je`/`-jet`
-
-Words ending in `-g` usually palatalize (g → gj) in the plural. Do not apply native Albanian noun suffixes blindly.
-
-| singular | indef. pl. | def. pl. nom. | def. pl. gen./dat. | note |
-|---|---|---|---|---|
-| dialog | dialogje | dialogjet | dialogjeve | confirmed: sqwiki article `Dialogjet e Platonit` |
-| blog | blogje | blogjet | blogjeve | by analogy |
-
-Errors seen: `dialogët`, `dialogëve`, `dialoge` — all wrong.
-
-### Wikilinks must be inflected for grammatical case
-
-The display text of a wikilink must agree with the case required by the surrounding sentence. The link target stays in its canonical (nominative) form; the pipe provides the inflected display.
-
-| context | wrong | right |
-|---|---|---|
-| after `në` (accusative) | `Në [[Athina Klasike]]` | `Në [[Athina Klasike|Athinën Klasike]]` |
-| after `në` (accusative) | `Në [[Franca e Re]]` | `Në [[Franca e Re\|Francën e Re]]` |
-| genitive `e/i/të` | usually handled by pipe already | check after all prepositions |
-
-Check every wikilink that appears after a preposition or in object position.
-
-### Vocabulary: "accounts / sources"
-
-`llogaritë` = financial accounts or login accounts — **never use for historical sources**.
-
-| intended meaning | use |
-|---|---|
-| testimonies, evidence | `dëshmi` (sg. `dëshmi`, pl. `dëshmi` / `dëshmitë`) |
-| written narratives | `rrëfime` (sg. `rrëfim`, pl. `rrëfime` / `rrëfimet`) |
-| sources in general | `burime` (sg. `burim`, pl. `burime` / `burimet`) |
-| explanation of something | `shpjegim` |
-
-### Era abbreviations
-
-In prose and infoboxes, use `p.e.s.` (para erës sonë) and `e.s.` (erës sonë). Do not hyperlink or spell out once the abbreviation is introduced. In category names, `para erës sonë` is spelled out and stays as-is.
-
-## Templates confirmed present on sqwiki (art/sculpture batch, verified 2026-08-01)
-
-`Stampa:Rreth` (this is the localized name Wikidata's sitelink returns for `Template:Circa` — a separate `Stampa:Circa` was independently confirmed present the same day by another job; treat both as valid, `Stampa:Rreth` is the one Wikidata actually links), `Stampa:Cite web/book/journal/news/press release`, `Stampa:Refbegin`/`Stampa:Refend`, `Stampa:Div col`/`Stampa:Div col end`, `Stampa:ISBN`, `Stampa:Lang`, `Stampa:Commons`, `Stampa:Convert`, `Stampa:Anchor`, `Stampa:Cite EB1911`, `Stampa:Webarchive`, `Stampa:Reflist`.
-
-**Family-name trap:** `Stampa:Wiktionary kuti` is the real sqwiki name for enwiki's `{{Wiktionary}}` sister-project box — not `Stampa:Wiktionary`. Don't assume a sister-project template family (Commons/Wiktionary/Wikiquote) carries over with matching names just because `{{Commons}}` does: `{{Wikiquote}}` itself has no sqwiki sitelink at all (drop it).
-
-**Missing (verified 2026-08-01):** `Stampa:Wikiquote`, `Stampa:Portal` (single-portal form, consistent with the med-batch finding above).
-
-## Article/person titles confirmed (art/sculpture batch, verified 2026-08-01)
-
-| enwiki | sqwiki |
-|---|---|
 | Sculpture | `Skulptura` (pre-existing 6.9 KB stub — rewrite target) |
 | Michelangelo | `Mikelanxhelo` — the old stub on this exact article had it wrong as `Mikelangjelo`; don't trust a live article's own internal links as pre-verified (see the rewrite-target note above) |
 | Pope Julius II | `Juli II` (no "Papa" prefix in the title itself) |
@@ -328,7 +202,6 @@ In prose and infoboxes, use `p.e.s.` (para erës sonë) and `e.s.` (erës sonë)
 | Filippo Brunelleschi | `Filippo Brunelleschi` (unchanged) |
 | Donatello | `Donatello` (unchanged) |
 | Andrea del Verrocchio | `Andrea del Verrokjo` — transliterated; display text can stay "Verrocchio" |
-| Leonardo da Vinci | `Leonardo da Vinçi` (matches the earlier Archimedes-batch finding above — consistent across jobs) |
 | Francesco Laurana | `Françesko Laurana` — transliterated |
 | Benvenuto Cellini | `Benvenuto Cellini` (unchanged) |
 | Gian Lorenzo Bernini | `Gian Lorenzo Bernini` (unchanged) |
@@ -354,5 +227,97 @@ In prose and infoboxes, use `p.e.s.` (para erës sonë) and `e.s.` (erës sonë)
 | Bronze Age | `Koha e Bronzit` |
 | Mesopotamia | `Mesopotamia` (unchanged) |
 | Mannerism, Neoclassicism, Ancient Greek art, Art of ancient Egypt, Buddhist art, African art, Byzantine art, Pre-Columbian art, Romanesque art, Upper Paleolithic, Aniconism, Land art, Installation art, Conceptual art, and ~40 individual 19th–21st-century sculptors (Henry Moore, Alberto Giacometti, Alexander Calder, Louise Bourgeois, Richard Serra, Andy Goldsworthy, Robert Smithson, Camille Claudel, Aristide Maillol, Antoine Bourdelle, François Rude, Jean-Baptiste Carpeaux, Jean-Antoine Houdon, Antonio Canova, John Flaxman, Bertel Thorvaldsen, Hiram Powers, Gislebertus, Nicola/Giovanni Pisano, Claus Sluter, Tilman Riemenschneider, Veit Stoss, Arnolfo di Cambio, Pisanello, Baccio Bandinelli, Giambologna, Adriaen de Vries, and more) | all *no sq article* — for a survey article this broad, the miss rate on individual modern/Western-European sculptors is high even for household names; don't assume canonical status implies coverage |
+| Eudoxus of Cnidus, Eutocius of Ascalon, Gottfried Wilhelm Leibniz, Hiero II of Syracuse, Isidore of Miletus, Conon of Samos, Pappus of Alexandria, Vitruvius, Syracuse (city), Siege of Syracuse, Archimedes' screw, Claw of Archimedes, Archimedes Palimpsest, mathematical physics, hydrostatics | all *no sq article found* despite multiple spelling attempts — left as plain text |
 
 Illustrates the general pattern for this wiki: ancient/classical figures and period-level concepts have much better coverage than post-1800 Western sculptors specifically, even famous ones. Budget verification accordingly — check the movement/period nouns first, they're more likely to pay off than an individual modern artist's name.
+
+## Phrasings sqwiki uses in running prose
+
+Useful as link targets, though the article titles behind them weren't separately confirmed:
+
+- *Princi-peshkopata e Malit të Zi* — Prince-Bishopric of Montenegro
+- *Kisha Ortodokse Serbe* — Serbian Orthodox Church
+
+## Access constraints
+
+Two independent blocks. Try `curl` first; fall back only if it is blocked.
+
+**`web_fetch` — URL provenance.** Only URLs that appeared in a prior search or fetch result can be fetched. An enwiki article URL surfaced by `web_search` works; editing it into `?action=raw`, `/w/api.php`, `/w/rest.php/v1/page/…` or `Special:Export` does not — the edited path is treated as unseen and rejected. So the wikitext source cannot be pulled via `web_fetch` even for articles you just fetched.
+
+**`bash` / `curl` — egress allowlist.** In some sandboxes, `curl` to `en.wikipedia.org` and `sq.wikipedia.org` returns `403 x-deny-reason: host_not_allowed` until the user adds the hosts to the allowlist.
+
+**Always send a User-Agent** (`-A "your-tool-name/1.0 (contact-info)"`). Wikimedia throttles or blocks generic clients, and a throttled response is a plain-text "too many requests" page, not JSON. When `curl` works:
+
+```bash
+UA="your-tool-name/1.0 (contact-info)"
+
+# Fetch enwiki raw wikitext
+curl -s -A "$UA" "https://en.wikipedia.org/wiki/ARTICLE?action=raw" > ARTICLE_enwiki_raw.wiki
+
+# Albanian langlinks for enwiki titles, following enwiki redirects (up to 50 titles per call)
+curl -s -A "$UA" "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&redirects=1&prop=langlinks&lllang=sq&lllimit=max&titles=A|B|C"
+
+# Existence of sqwiki articles or templates (up to 50 titles per call; prefix templates with Stampa:)
+curl -s -A "$UA" "https://sq.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&redirects=1&titles=A|B|Stampa:C"
+
+# Fetch sqwiki template page to verify parameters
+curl -s -A "$UA" "https://sq.wikipedia.org/wiki/Stampa:TEMPLATE_NAME?action=raw"
+curl -s -A "$UA" "https://sq.wikipedia.org/wiki/Stampa_diskutim:TEMPLATE_NAME?action=raw"
+
+# Fetch sqwiki CS1 module to debug Lua errors
+curl -s -A "$UA" "https://sq.wikipedia.org/w/index.php?title=Moduli:Citation/CS1&action=raw" | sed -n 'LINE_NUMp'
+```
+
+**If curl stops working** (user revoked access or new machine), fall back to:
+- `web_search` for article existence — result URL confirms title and existence
+- `wikiwand.com/sq/...` mirrors sqwiki and appears in search results; presence there implies the sq article exists
+- Wikidata item pages are fetchable via `web_fetch` and their sitelink lists resolve both article and template existence
+- Otherwise verification is one `web_search` per target — budget accordingly, prioritise lead and infobox titles first
+
+**Propose enabling the allowlist** when starting a long article if curl is blocked. It's the single biggest quality lever: bulk link verification via the API eliminates the reason long articles end up under-linked.
+
+**Link checks get silently rate-limited when done one-title-per-request.** One call per title in a loop hits rate limits after roughly 15–20 rapid requests; the response body then comes back empty or non-JSON, and a naive parser reports these as missing — a false negative that leaves real, existing sqwiki articles wrongly unlinked. Always batch with `|`-joined `titles=`, and pause between batches for very long lists. Never trust a "missing" result from an unbatched, rapid-fire loop.
+
+**Prefer enwiki langlinks over `wbgetentities?sites=enwiki`.** Source wikitext often links enwiki redirects (`[[polio]]`) and lowercase forms; `redirects=1` on the enwiki API resolves both, while `wbgetentities` only matches the exact stored title.
+
+**At 400–500+ unique targets (equipment lists, order-of-battle, filmographies), script the batching instead of hand-writing each `curl` call.** The API caps at 50 titles per request, so a large list article needs 10+ batches; a short throwaway script removes the tedium and produces a durable TSV cache you can `grep` for the rest of the job instead of re-querying. It reads `targets.txt` (see the extraction command in SKILL.md):
+
+```python
+import json, time, urllib.parse, urllib.request
+
+API = "https://en.wikipedia.org/w/api.php"
+UA = "your-tool-name/1.0 (contact-info)"
+
+with open("targets.txt") as f:
+    titles = list(dict.fromkeys(l.strip() for l in f if l.strip()))
+
+results = {}
+for i in range(0, len(titles), 50):
+    batch = titles[i:i + 50]
+    params = urllib.parse.urlencode({
+        "action": "query", "format": "json", "formatversion": 2, "redirects": 1,
+        "prop": "langlinks", "lllang": "sq", "lllimit": "max", "titles": "|".join(batch),
+    })
+    req = urllib.request.Request(f"{API}?{params}", headers={"User-Agent": UA})
+    with urllib.request.urlopen(req) as resp:
+        body = resp.read().decode()
+    try:
+        q = json.loads(body)["query"]
+    except (ValueError, KeyError):
+        raise SystemExit(f"Unexpected response at batch {i // 50} (rate-limited?): {body[:200]}")
+    # Follow each requested title through normalization and redirects to the final page
+    final = {t: t for t in batch}
+    for step in ("normalized", "redirects"):
+        hop = {x["from"]: x["to"] for x in q.get(step, [])}
+        final = {t: hop.get(p, p) for t, p in final.items()}
+    sq = {p["title"]: (p.get("langlinks") or [{}])[0].get("title") for p in q.get("pages", [])}
+    for t in batch:
+        results[t] = sq.get(final[t])
+    time.sleep(0.5)
+
+with open("link_verification.tsv", "w") as f:
+    for t in titles:
+        f.write(f"{t}\t{results.get(t) or ''}\n")
+```
+
+Then draft against `grep -E '^(Target1|Target2|...)\t' link_verification.tsv` per section instead of re-hitting the API. Anything with a non-empty second column links directly; anything empty gets `[[:en:Exact Title|Display]]` (see the interwiki-fallback note in SKILL.md) rather than a guessed sqwiki title or bare plain text.
